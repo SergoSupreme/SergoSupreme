@@ -19,7 +19,7 @@ function out($d, int $code = 200) { while (ob_get_level()) ob_end_clean(); heade
 function fail(string $err, int $code = 400) { out(['ok' => false, 'error' => $err], $code); }
 function rawBody(): string { static $r = null; if ($r === null) { $r = (string)file_get_contents('php://input'); if ($r !== '' && ($_SERVER['HTTP_CONTENT_ENCODING'] ?? '') === 'gzip') $r = @gzdecode($r) ?: ''; } return $r; }
 function body(): array { static $b = null; if ($b === null) { $raw = rawBody(); $b = $raw ? (json_decode($raw, true) ?: []) : []; if (!$b && !empty($_POST['payload'])) $b = json_decode($_POST['payload'], true) ?: []; } return $b; }
-const MIN_CLIENT = '1.9';
+const MIN_CLIENT = '1.9.1';
 function arg(string $k, $d = null) { $b = body(); return $b[$k] ?? ($_GET[$k] ?? $d); }
 
 function rate(string $key, int $max, int $win) {

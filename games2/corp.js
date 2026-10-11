@@ -40,7 +40,7 @@ const corpErr = { no_corp: 'Ти не в корпорації', in_corp: 'Ти �
   corp_limit_b: 'Денний ліміт банкнот вичерпано', corp_limit_c: 'Денний ліміт монет вичерпано', corp_max: 'Максимальний рівень', corp_budget: 'Недостатньо коштів у бюджеті', coll_incomplete: 'Колекцію ще не зібрано', corp_full: 'У корпорації немає вільних місць', corp_boost_on: 'Бонус уже діє', corp_boost_zero: 'Спершу збудуй споруду',
   task_done: 'Завдання вже виконано', already_claimed: 'Нагороду вже отримано', task_busy: 'Ти вже виконуєш або допомагаєш в іншому завданні', corp_building: 'Споруда вже будується', ctask_have: 'У тебе вже є завдання', ctask_cancel_wait: 'Скасувати завдання можна раз на 3 години',
   ctask_not_done: 'Завдання ще не виконано', coll_cycle_done: 'Усі колекції циклу вже зібрано', bad_op: 'Помилка запиту',
-  inv_day: 'Переговори бувають лише в понеділок, вівторок, суботу й неділю', inv_cool: 'Переговори можна проводити раз на 24 години',
+  inv_day: 'Переговори бувають лише в середу, четвер, суботу й неділю', inv_cool: 'Переговори ще на паузі',
   inv_on: 'Переговори вже тривають', inv_none: 'Зараз переговорів немає', inv_over: 'Переговори вже завершено',
   inv_late: 'Збір завершено — приєднатися вже не можна', inv_not_in: 'Ти не береш участі в цих переговорах', inv_answered: 'Відповідь уже зараховано',
   inv_round: 'Питання вже змінилося' };
@@ -382,6 +382,7 @@ function invPrefetch(st) {
   st.qs.forEach(i => { const q = invQ(st.mode, i); invTxt(q[0]); q[1].forEach(invTxt); });
 }
 const invDayName = n => ['', 'понеділок', 'вівторок', 'середа', 'четвер', "п'ятниця", 'субота', 'неділя'][n] || '';
+const invDayShort = n => ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'][n] || '';
 const invDaysTxt = () => INVEST.days.map(d => tr(invDayName(d))).join(', ');
 const invRevNeed = (m, lvl) => Math.round(m.rev * (1 + 0.25 * Math.max(0, lvl - 1)));
 const invMyRev = () => (typeof revHourRate === 'function' ? revHourRate() : 0);
@@ -508,8 +509,10 @@ function invHTML(C, my) {
 // --- немає переговорів: правила, нагороди й кнопка директора ---
 function invIdleHTML(I, C, my) {
   const cool = invCool(), can = my >= 4, ok = I.day_ok && cool <= 0;
+  // після невдалих переговорів пауза коротка, після успішних — доба (і не раніше дня переговорів)
+  const day = cool >= 3600 && I.next_dow_cool ? ' · ' + tr(invDayName(I.next_dow_cool)) : '';
   const status = ok ? ['on', tr('Інвестори готові до зустрічі')]
-    : I.day_ok ? ['wait', `${tr('Наступні переговори через')} <b class="inv-cool">${fmtT(cool)}</b>`]
+    : cool > 0 ? ['wait', `${I.cool_ok ? tr('Наступні переговори через') : tr('Повторна спроба через')} <b class="inv-cool">${fmtT(cool)}</b>${day}`]
     : ['off', `${tr('Вихідний в інвесторів')} · ${tr('далі')} ${tr(invDayName(I.next_dow || 1))}`];
 
   let h = `<div class="ivhero">
@@ -517,7 +520,7 @@ function invIdleHTML(I, C, my) {
         <img class="ivh-s a" src="${CSRC('ic_4')}" alt=""><img class="ivh-s b" src="${CSRC('ic_2')}" alt=""></div>
       <b class="ivhero-t">${tr('Інвестори')}</b>
       <p class="ivhero-p">${tr('Заповніть шкалу на 100% за відведений час — і корпорація отримає внесок.')}</p>
-      <div class="ivdays">${INVEST.days.map(d => `<span>${tr(invDayName(d)).slice(0, 2)}</span>`).join('')}</div>
+      <div class="ivdays">${INVEST.days.map(d => `<span>${tr(invDayShort(d))}</span>`).join('')}</div>
     </div>
     <div class="ivstatus ${status[0]}"><i></i><span>${status[1]}</span></div>`;
 
@@ -532,7 +535,7 @@ function invIdleHTML(I, C, my) {
   }).join('') + '</div>';
 
   if (can) h += `<button class="btn gold shine wide ivgo" data-a="invgo" ${ok ? '' : 'disabled'}>
-      <img src="${CSRC('ic_3')}" class="ib">${ok ? tr('Почати переговори') : I.day_ok ? tr('Ще рано') : tr('Сьогодні зачинено')}</button>
+      <img src="${CSRC('ic_3')}" class="ib">${ok ? tr('Почати переговори') : cool > 0 ? `${tr('Через')} ${fmtT(cool)}` : tr('Сьогодні зачинено')}</button>
     <div class="ivhint">${tr('Усім прийде сповіщення · на збір 5 хвилин · раз на добу')}</div>`;
   else h += `<div class="ivhint">${tr('Переговори призначає Директор. Стеж за сповіщенням — на збір 5 хвилин.')}</div>`;
 

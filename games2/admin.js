@@ -653,7 +653,7 @@ function promoSync() {
   rwSync('p');
 }
 async function admClick(e) {
-  const t = e.target.closest('button, [data-player], [data-promo]'); if (!t || !t.closest('#adm')) return;
+  const t = e.target.closest('button, [data-player], [data-promo], [data-corp]'); if (!t || !t.closest('#adm')) return;
   const d = t.dataset, main = document.getElementById('adm-main');
   if ('close' in d) return admClose();
   if (d.pick) return openPick(t);

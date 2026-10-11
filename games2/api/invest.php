@@ -18,9 +18,10 @@
 if (!defined('MIN_CLIENT')) { http_response_code(403); exit; }
 require_once __DIR__ . '/corp_core.php';
 
-const INV_DAYS = [1, 2, 6, 7];       // Пн, Вт, Сб, Нд
+const INV_DAYS = [3, 4, 6, 7];       // Ср, Чт, Сб, Нд
 const INV_LOBBY = 300;               // збір — 5 хвилин
-const INV_COOLDOWN = 24 * 3600;      // одні переговори на добу
+const INV_COOL_OK = 24 * 3600;       // після успішних переговорів — доба
+const INV_COOL_FAIL = 600;           // після невдалих можна спробувати ще за 10 хвилин
 const INV_MIN_SHARE = 1.0;           // % прогресу команди для персональної нагороди
 const INV_TZ = 'Europe/Kyiv';
 const INV_GRACE = 3;                 // секунди запасу на мережу при відповіді
@@ -49,10 +50,20 @@ function invQCount(string $m): int { return count(INV_ANS[$m] ?? INV_ANS['easy']
 function invWeekday(?int $t = null): int { return (int)(new DateTime('@' . ($t ?? time())))->setTimezone(new DateTimeZone(INV_TZ))->format('N'); }
 function invDayOk(?int $t = null): bool { return in_array(invWeekday($t), INV_DAYS, true); }
 // Наступне вікно переговорів (початок доби в Києві) — щоб показати гравцям, коли чекати
-function invNextDay(): int {
-  $d = (new DateTime('now', new DateTimeZone(INV_TZ)))->setTime(0, 0);
-  for ($i = 1; $i <= 7; $i++) { $d->modify('+1 day'); if (in_array((int)$d->format('N'), INV_DAYS, true)) return $d->getTimestamp(); }
+function invNextDay(?int $from = null): int {
+  $d = (new DateTime('@' . ($from ?? time())))->setTimezone(new DateTimeZone(INV_TZ))->setTime(0, 0);
+  for ($i = 1; $i <= 8; $i++) { $d->modify('+1 day'); if (in_array((int)$d->format('N'), INV_DAYS, true)) return $d->getTimestamp(); }
   return time();
+}
+// Момент $t переносимо вперед, якщо він випадає на день без переговорів
+function invDayFix(int $t): int { return invDayOk($t) ? $t : invNextDay($t); }
+// Коли корпорації знову можна сідати за стіл: після успіху — доба, після невдачі — 10 хвилин,
+// і в обох випадках не раніше найближчого дня переговорів
+function invNextAt(int $cid): int {
+  $r = q('SELECT ended_at, started_at, ok FROM corp_invest WHERE corp_id = ? AND state = 2 ORDER BY id DESC LIMIT 1', [$cid])->fetch();
+  if (!$r) return 0;
+  $base = (int)$r['ended_at'] ?: (int)$r['started_at'];
+  return invDayFix($base + ((int)$r['ok'] ? INV_COOL_OK : INV_COOL_FAIL));
 }
 // Бонус від зафіксованої виручки за годину: 0 (не вразили) .. 1 (повний)
 function invRevBonus(float $rev, string $mode, int $lvl): float {
@@ -206,9 +217,10 @@ function invDispatch(string $a, int $pid, array $me) {
       $inv = invActive($cid);
       if ($inv && invEnded($inv)) { invFinish((int)$inv['id']); $inv = null; }
       $last = q('SELECT * FROM corp_invest WHERE corp_id = ? AND state = 2 ORDER BY id DESC LIMIT 1', [$cid])->fetch();
-      $lastAt = (int)q('SELECT COALESCE(MAX(started_at), 0) FROM corp_invest WHERE corp_id = ?', [$cid])->fetchColumn();
+      $next = invNextAt($cid); $cool = max(0, $next - time());
       $res = ['ok' => true, 'lvl' => $L, 'role' => (int)$c['role'], 'members' => (int)q('SELECT COUNT(*) FROM corp_members WHERE corp_id = ?', [$cid])->fetchColumn(),
-        'day_ok' => invDayOk(), 'next_day' => invNextDay(), 'next_dow' => invWeekday(invNextDay()), 'cool' => max(0, $lastAt + INV_COOLDOWN - time()),
+        'day_ok' => invDayOk(), 'next_day' => invNextDay(), 'next_dow' => invWeekday(invNextDay()),
+        'cool' => $cool, 'cool_ok' => $last ? (int)$last['ok'] : 0, 'next_dow_cool' => $cool ? invWeekday($next) : 0,
         'last' => $last ? invResult($last) : null, 'now' => time()];
       $res['inv'] = $inv ? invState($inv, $pid) : null;
       out($res);
@@ -222,8 +234,7 @@ function invDispatch(string $a, int $pid, array $me) {
       db()->beginTransaction();
       q('SELECT id FROM corps WHERE id = ? FOR UPDATE', [$cid])->fetchColumn();
       if (invActive($cid)) { db()->rollBack(); fail('inv_on'); }
-      $lastAt = (int)q('SELECT COALESCE(MAX(started_at), 0) FROM corp_invest WHERE corp_id = ?', [$cid])->fetchColumn();
-      if (time() - $lastAt < INV_COOLDOWN) { db()->rollBack(); fail('inv_cool'); }
+      if (time() < invNextAt($cid)) { db()->rollBack(); fail('inv_cool'); }
       $now = time();
       q('INSERT INTO corp_invest (corp_id, starter_id, mode, seed, state, started_at, begin_at, lvl) VALUES (?, ?, ?, ?, 0, ?, ?, ?)',
         [$cid, $pid, $mode, random_int(1, 2000000000), $now, $now + INV_LOBBY, corpLevel($c)]);
