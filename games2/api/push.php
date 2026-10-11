@@ -14,7 +14,11 @@ const PUSH_GROUP = ['dm' => 'msg', 'gift' => 'msg', 'cinv' => 'msg', 'cchat' => 
 const PUSH_PREFS = ['all', 'msg', 'chat', 'promo', 'tour', 'corp', 'tower'];
 const PUSH_LANGS = ['uk', 'en', 'ru', 'de', 'fr', 'it', 'ja', 'ko', 'zh'];
 
-function pushOn(): bool { return is_file(PUSH_KEY); }
+require_once __DIR__ . '/webpush.php'; // сповіщення в браузері (Web Push + VAPID) — ті самі типи, що й у застосунку
+
+// кому взагалі є куди надсилати: застосунок (Firebase) або браузер (Web Push)
+const PUSH_ANY = '(SELECT player_id, lang, tz, prefs FROM push_tokens UNION ALL SELECT player_id, lang, tz, prefs FROM push_web)';
+function pushOn(): bool { static $o = null; if ($o === null) $o = is_file(PUSH_KEY) || wpOn(); return $o; }
 
 // Тексти сповіщень мовою гравця: [заголовок, текст]; {nick} {corp} {text} {title} {place} підставляються
 function pushTexts(): array {
@@ -196,7 +200,7 @@ function pushLog(int $pid, string $kind, string $res, string $info = '') {
 function pushTo(int $pid, string $kind, array $v = [], string $open = '', string $tag = '', array $extra = []) {
   if (!pushOn() || $pid <= 0) return;
   try {
-    if (!q('SELECT 1 FROM push_tokens WHERE player_id = ? LIMIT 1', [$pid])->fetchColumn()) return; // немає застосунку — нікому надсилати
+    if (!q('SELECT 1 FROM ' . PUSH_ANY . ' t WHERE player_id = ? LIMIT 1', [$pid])->fetchColumn()) return; // ні застосунку, ні браузера — нікому надсилати
     // чекаємо лише якщо гравець щойно був у грі: рівно до моменту, коли мине хвилина без активності. Неактивному — одразу
     $wait = 0;
     if (in_array($kind, PUSH_LATER, true)) $wait = max(0, (int)q('SELECT UNIX_TIMESTAMP(last_seen) FROM players WHERE id = ?', [$pid])->fetchColumn() + PUSH_WAIT - time());
@@ -215,7 +219,7 @@ function pushAll(string $kind, array $v = [], string $open = '') {
 function pushChatAll(int $from, string $nick, string $text, int $skip = 0) {
   if (!pushOn()) return;
   try {
-    $ids = q('SELECT DISTINCT t.player_id FROM push_tokens t LEFT JOIN push_state s ON s.player_id = t.player_id
+    $ids = q('SELECT DISTINCT t.player_id FROM ' . PUSH_ANY . ' t LEFT JOIN push_state s ON s.player_id = t.player_id
               WHERE t.player_id <> ? AND t.player_id <> ? AND COALESCE(s.gchat_at, 0) < ? AND t.player_id NOT IN (SELECT player_id FROM player_blocks WHERE blocked_id = ?)', [$from, $skip, time() - 900, $from])->fetchAll(PDO::FETCH_COLUMN);
     $data = json_encode(['v' => ['nick' => $nick, 'text' => $text], 'open' => 'chat', 'tag' => 'gchat', 'at' => time()], JSON_UNESCAPED_UNICODE);
     foreach (array_chunk($ids, 200) as $ch) {
@@ -297,13 +301,16 @@ function pushRun(int $limit = 60) {
     $rows = q('SELECT id, player_id, kind, data FROM push_queue WHERE send_after <= UTC_TIMESTAMP() ORDER BY id LIMIT ' . (int)$limit)->fetchAll();
     if (!$rows) return;
     q('DELETE FROM push_queue WHERE id IN (' . implode(',', array_map(fn($r) => (int)$r['id'], $rows)) . ')');
-    $msgs = []; $meta = [];
+    $msgs = []; $meta = []; $wmsgs = []; $wmeta = [];
     foreach ($rows as $r) {
       $pid = (int)$r['player_id']; $kind = $r['kind']; $d = json_decode((string)$r['data'], true) ?: [];
-      $toks = q('SELECT token, lang, tz, prefs FROM push_tokens WHERE player_id = ?', [$pid])->fetchAll(); if (!$toks) { pushLog($pid, $kind, 'notoken'); continue; }
-      $prefs = array_filter(explode(',', (string)$toks[0]['prefs']));
+      $toks = q('SELECT token, lang, tz, prefs FROM push_tokens WHERE player_id = ?', [$pid])->fetchAll();
+      $webs = wpOn() ? q('SELECT ep_hash, endpoint, p256dh, auth, lang, tz, prefs FROM push_web WHERE player_id = ?', [$pid])->fetchAll() : [];
+      if (!$toks && !$webs) { pushLog($pid, $kind, 'notoken'); continue; }
+      $cfgRow = $toks[0] ?? $webs[0];
+      $prefs = array_filter(explode(',', (string)$cfgRow['prefs']));
       if ($kind !== 'test' && (in_array('all', $prefs, true) || in_array(PUSH_GROUP[$kind] ?? '', $prefs, true))) { pushLog($pid, $kind, 'off'); continue; } // гравець вимкнув цю групу
-      $tz = (int)$toks[0]['tz']; $loc = time() + $tz * 60; $h = (int)gmdate('G', $loc);
+      $tz = (int)$cfgRow['tz']; $loc = time() + $tz * 60; $h = (int)gmdate('G', $loc);
       $now = in_array($kind, PUSH_NOW, true);
       if ($kind === 'gchat' && ($h >= 23 || $h < 8)) { pushLog($pid, $kind, 'night'); continue; } // загальний чат уночі не турбує (і зранку вже неактуальний)
       if (!$now && ($h >= 23 || $h < 8)) { // тихі години — переносимо на ранок за часом гравця
@@ -319,15 +326,26 @@ function pushRun(int $limit = 60) {
       $n = ($st && $st['day'] === $day) ? (int)$st['n'] : 0;
       if (!$now && $kind !== 'adm' && $n >= PUSH_CAP) { pushLog($pid, $kind, 'limit'); continue; } // ліміт на день — не набридаємо
       if (!$now) q('INSERT INTO push_state (player_id, day, n) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE n = IF(day = VALUES(day), n + 1, 1), day = VALUES(day)', [$pid, $day]);
+      $open = (string)($d['open'] ?? ''); $tag = (string)($d['tag'] ?? '');
       foreach ($toks as $t) {
         $lang = in_array($t['lang'], PUSH_LANGS, true) ? $t['lang'] : 'uk';
         [$ti, $bo] = pushText($kind, $lang, (array)($d['v'] ?? []));
-        $msgs[] = fcmMessage($t['token'], $ti, $bo, $kind, (string)($d['open'] ?? ''), (string)($d['tag'] ?? '')); $meta[] = [$t['token'], $pid, $kind, $bo];
+        $msgs[] = fcmMessage($t['token'], $ti, $bo, $kind, $open, $tag); $meta[] = [$t['token'], $pid, $kind, $bo];
+      }
+      foreach ($webs as $w) {   // те саме сповіщення — у браузер
+        $lang = in_array($w['lang'], PUSH_LANGS, true) ? $w['lang'] : 'uk';
+        [$ti, $bo] = pushText($kind, $lang, (array)($d['v'] ?? []));
+        $wmsgs[] = wpMessage($w, $ti, $bo, $kind, $open, $tag); $wmeta[] = [$w['ep_hash'], $pid, $kind, $bo];
       }
     }
     foreach (fcmSendMany($msgs) as $i => $res) {
       [$tok, $lp, $lk, $lb] = $meta[$i];
       if ($res === 'gone') q('DELETE FROM push_tokens WHERE token = ?', [$tok]); // застосунок видалено — токен більше не дійсний
+      pushLog($lp, $lk, $res === 'ok' ? 'sent' : $res, $lb);
+    }
+    foreach (wpSendMany($wmsgs) as $i => $res) {
+      [$eh, $lp, $lk, $lb] = $wmeta[$i];
+      if ($res === 'gone') q('DELETE FROM push_web WHERE ep_hash = ?', [$eh]); // підписку в браузері скасовано
       pushLog($lp, $lk, $res === 'ok' ? 'sent' : $res, $lb);
     }
   } finally { q("SELECT RELEASE_LOCK(?)", ['mx_push_' . cfg('db_name')]); }
@@ -336,7 +354,7 @@ function pushRun(int $limit = 60) {
 function pushFanout() {
   foreach (q('SELECT id, kind, data, cursor_pid FROM push_bcast WHERE done = 0 ORDER BY id LIMIT 3')->fetchAll() as $b) {
     $d = json_decode((string)$b['data'], true) ?: [];
-    $ids = q('SELECT DISTINCT player_id FROM push_tokens WHERE player_id > ? ORDER BY player_id LIMIT 500', [(int)$b['cursor_pid']])->fetchAll(PDO::FETCH_COLUMN);
+    $ids = q('SELECT DISTINCT player_id FROM ' . PUSH_ANY . ' t WHERE player_id > ? ORDER BY player_id LIMIT 500', [(int)$b['cursor_pid']])->fetchAll(PDO::FETCH_COLUMN);
     foreach (array_chunk($ids, 100) as $ch) {
       $vals = []; $args = [];
       foreach ($ch as $pid) { $vals[] = '(?, ?, ?, UTC_TIMESTAMP())'; array_push($args, (int)$pid, $b['kind'], json_encode(['v' => $d['v'] ?? [], 'open' => $d['open'] ?? '', 'tag' => $b['kind'] . $b['id']], JSON_UNESCAPED_UNICODE)); }
@@ -350,7 +368,7 @@ function pushIdleScan() {
   $f = sys_get_temp_dir() . '/mx_push_idle_' . md5(cfg('db_name'));
   if (is_file($f) && filemtime($f) > time() - 600) return; @touch($f);
   q('DELETE FROM push_log WHERE created_at < NOW() - INTERVAL 7 DAY');
-  $rows = q('SELECT p.id, UNIX_TIMESTAMP(p.last_seen) seen, s.idle_stage, s.idle_ref FROM (SELECT DISTINCT player_id FROM push_tokens) t
+  $rows = q('SELECT p.id, UNIX_TIMESTAMP(p.last_seen) seen, s.idle_stage, s.idle_ref FROM (SELECT DISTINCT player_id FROM ' . PUSH_ANY . ' u) t
              JOIN players p ON p.id = t.player_id LEFT JOIN push_state s ON s.player_id = p.id
              WHERE p.last_seen < UTC_TIMESTAMP() - INTERVAL 12 HOUR AND p.last_seen > UTC_TIMESTAMP() - INTERVAL 30 DAY LIMIT 2000')->fetchAll();
   foreach ($rows as $r) {

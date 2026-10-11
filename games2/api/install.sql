@@ -507,6 +507,21 @@ CREATE TABLE IF NOT EXISTS push_tokens (
   KEY ix_player (player_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Підписки браузера на сповіщення (Web Push). ep_hash — бо адреса буває довша за індекс
+CREATE TABLE IF NOT EXISTS push_web (
+  ep_hash     CHAR(40) CHARACTER SET ascii NOT NULL,
+  endpoint    VARCHAR(500) NOT NULL,
+  p256dh      VARCHAR(255) CHARACTER SET ascii NOT NULL,
+  auth        VARCHAR(64)  CHARACTER SET ascii NOT NULL,
+  player_id   INT UNSIGNED NOT NULL,
+  lang        VARCHAR(4) NOT NULL DEFAULT 'uk',
+  tz          SMALLINT NOT NULL DEFAULT 120,
+  prefs       VARCHAR(64) NULL,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (ep_hash),
+  KEY ix_player (player_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS push_queue (
   id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   player_id   INT UNSIGNED NOT NULL,

@@ -19,7 +19,7 @@ function out($d, int $code = 200) { while (ob_get_level()) ob_end_clean(); heade
 function fail(string $err, int $code = 400) { out(['ok' => false, 'error' => $err], $code); }
 function rawBody(): string { static $r = null; if ($r === null) { $r = (string)file_get_contents('php://input'); if ($r !== '' && ($_SERVER['HTTP_CONTENT_ENCODING'] ?? '') === 'gzip') $r = @gzdecode($r) ?: ''; } return $r; }
 function body(): array { static $b = null; if ($b === null) { $raw = rawBody(); $b = $raw ? (json_decode($raw, true) ?: []) : []; if (!$b && !empty($_POST['payload'])) $b = json_decode($_POST['payload'], true) ?: []; } return $b; }
-const MIN_CLIENT = '1.7';
+const MIN_CLIENT = '1.8';
 function arg(string $k, $d = null) { $b = body(); return $b[$k] ?? ($_GET[$k] ?? $d); }
 
 function rate(string $key, int $max, int $win) {
@@ -75,7 +75,7 @@ function ensureSchema(bool $force = false) {
             'hotel_lvl' => 'INT UNSIGNED NOT NULL DEFAULT 1', 'chests' => 'INT UNSIGNED NOT NULL DEFAULT 0', 'achievements' => 'INT UNSIGNED NOT NULL DEFAULT 0'] as $c => $def)
     if (!q("SHOW COLUMNS FROM player_stats LIKE '$c'")->fetch()) db()->exec("ALTER TABLE player_stats ADD COLUMN $c $def");
   $sql = file_get_contents(__DIR__ . '/install.sql');
-  foreach (['player_floors', 'player_residents', 'friends', 'player_blocks', 'dm_messages', 'promos', 'promo_claims', 'balance_log', 'econ_daily', 'admin_log', 'reward_claims', 'gifts', 'settings', 'corps', 'corp_members', 'corp_invites', 'corp_don', 'corp_log', 'corp_chat', 'corp_invest', 'corp_invest_p', 'donations', 'tour_cups', 'tour_corp', 'tr_cache', 'push_tokens', 'push_queue', 'push_bcast', 'push_state', 'push_log'] as $t) if (preg_match('/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=[^;]+;/s', $sql, $m)) db()->exec($m[0]);
+  foreach (['player_floors', 'player_residents', 'friends', 'player_blocks', 'dm_messages', 'promos', 'promo_claims', 'balance_log', 'econ_daily', 'admin_log', 'reward_claims', 'gifts', 'settings', 'corps', 'corp_members', 'corp_invites', 'corp_don', 'corp_log', 'corp_chat', 'corp_invest', 'corp_invest_p', 'donations', 'tour_cups', 'tour_corp', 'tr_cache', 'push_tokens', 'push_web', 'push_queue', 'push_bcast', 'push_state', 'push_log'] as $t) if (preg_match('/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=[^;]+;/s', $sql, $m)) db()->exec($m[0]);
   // стандартні новини більше не потрібні — новини створює лише адміністратор
   q("DELETE FROM news WHERE id <= 7 AND title IN ('Ласкаво просимо!','Колекції','Лабіринт','Лотерея','Щаслива година','Вертолітний майданчик','Сезонний пропуск')");
   db()->exec('ALTER TABLE news AUTO_INCREMENT = 100');
@@ -198,7 +198,7 @@ function cleanText($s, int $max): string { $s = trim((string)$s); if ($s === '')
 try {
   $a = (string)($_GET['a'] ?? arg('a', ''));
   require_once __DIR__ . '/tour.php'; // турнір кубків: функції + дії tour*
-  require_once __DIR__ . '/push.php'; // пуш-сповіщення: функції + дії push_*
+  require_once __DIR__ . '/push.php'; // пуш-сповіщення: функції + дії push_* і webpush_* (браузер)
   if (strncmp($a, 'adm_', 4) === 0) { require __DIR__ . '/admin_api.php'; exit; }
   if (strncmp($a, 'corp_', 5) === 0) { require __DIR__ . '/corp_api.php'; exit; }
   switch ($a) {

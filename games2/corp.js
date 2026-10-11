@@ -391,25 +391,36 @@ async function invLoad(soft) {
   invPrefetch(INV.st);
   if (corpShowing() && corpTab === 'inv') { $('#m-body')._h = null; modalRefresh(); }
 }
+// підсумок показуємо рівно один раз — навіть якщо переговори закрив хтось інший
+function invResultOnce(R) {
+  if (!R || INV.shown === R.id) return;
+  INV.shown = R.id;
+  const me = NET.auth && NET.auth.player.id;
+  if (!(R.parts || []).some(p => p.id === me)) return;   // хто не брав участі — не турбуємо
+  invShowResult(R);
+}
 async function invPoll() {
   if (INV.busy) return; INV.busy = true;
   try {
     const r = await api('corp_inv_state'); if (!r.ok) return;
-    if (r.done) { INV.st = null; INV.last = r.done; invShowResult(r.done); await invLoad(true); return; }
+    if (r.done) { INV.st = null; INV.last = r.done; invResultOnce(r.done); await invLoad(true); return; }
     const was = INV.st && INV.st.round;
     INV.st = r.inv || null;
     if (INV.st) { invPrefetch(INV.st); if (was !== undefined && was !== INV.st.round) { INV.sent = 0; INV.hint = null; } }
-    else await invLoad(true);
+    else { await invLoad(true); invResultOnce(INV.last); }
     if (corpShowing() && corpTab === 'inv') { $('#m-body')._h = null; modalRefresh(); }
   } finally { INV.busy = false; }
 }
 function invTimer(on) {
   clearInterval(INV.t); INV.t = null;
   if (!on) return;
+  let tick = 0;
   INV.t = setInterval(() => {
     if (!corpShowing() || corpTab !== 'inv') { invTimer(false); return; }
     if (document.hidden) return;
-    if (INV.st) invPoll(); else { $('#m-body')._h = null; modalRefresh(); }
+    tick++;
+    // під час переговорів оновлюємось щосекунди, без них — раз на 5 секунд (таймери цокають самі через data-end)
+    if (INV.st) { invPoll(); modalRefresh(); } else if (tick % 5 === 0) invPoll();
   }, 1000);
 }
 
@@ -420,7 +431,7 @@ function invShowResult(R) {
   const mine = (R.parts || []).find(p => p.id === me);
   const items = [];
   if (R.ok) { items.push({ img: BUCK, text: '+' + fmt(R.bucks) }, { img: COIN, text: '+' + fmt(R.coins) }, { img: 'star3', text: '+' + fmt(R.xp) }); }
-  if (mine && mine.share >= INVEST.minShare) items.push({ img: BUCK, text: '+' + m.me + tr(' тобі') });
+  if (mine && mine.share >= INVEST.minShare) items.push({ img: BUCK, text: '+' + m.me + ' · ' + tr('тобі') });
   sfx(R.ok ? 'level' : 'err'); if (R.ok) confetti(40);
   showReward({ title: R.ok ? 'Інвестори погодились!' : 'Інвестори взяли паузу', img: R.ok ? 'bz_office' : 'clipboard',
     name: `${tr('Прогрес команди')}: ${R.pct}%`, items,

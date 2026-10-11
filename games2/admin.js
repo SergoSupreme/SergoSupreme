@@ -491,13 +491,13 @@ const PUSH_OPEN = [['', 'Гра', 'house'], ['mail', 'Пошта', 'mail'], ['ne
 ADM.pq = { to: '', title: '', text: '', open: '' }; ADM.plf = 'all';
 async function admPush() {
   const r = await aApi('adm_settings'); if (!r.ok) return ''; const P = r.push || {}, ps = r.pstat || {}, f = ADM.pq;
-  if (!P.on) return `<section class="adm-card">${aHead('bell', 'Пуш-сповіщення', 'не підключено')}<p class="adm-hint c">Поклади секретний ключ сервісного акаунта Firebase у файл <b>api/firebase-key.json</b> на сервері — і розділ запрацює.</p></section>`;
+  if (!P.on) return `<section class="adm-card">${aHead('bell', 'Сповіщення', 'не підключено')}<p class="adm-hint c">Для телефонів поклади секретний ключ сервісного акаунта Firebase у файл <b>api/firebase-key.json</b> на сервері. Сповіщення в браузері вмикаються самі, щойно сайт працює по HTTPS.</p></section>`;
   const sv = r.srv || {}, cron = sv.cron_at && Date.now() / 1000 - sv.cron_at < 180;
   const L = (P.log || []).filter(l => ADM.plf === 'all' || (ADM.plf === 'ok' ? l.res === 'sent' : l.res !== 'sent'));
-  return `<section class="adm-kpis k3">${[['phone', 'Пристроїв', P.tokens, 'із застосунком'], ['check', 'Надіслано', +ps.sent || 0, 'за добу'], ['close', 'Помилок', +ps.bad || 0, 'за добу'],
-      ['clock', 'У черзі', P.queue, 'чекають відправки'], ['crown', 'Твоїх', P.mine, 'пристроїв'], ['gear', 'Cron', cron ? '✓' : '—', cron ? 'працює' : 'не налаштовано']]
+  return `<section class="adm-kpis k3">${[['phone', 'Підписок', P.tokens, 'застосунок + браузер'], ['check', 'Надіслано', +ps.sent || 0, 'за добу'], ['close', 'Помилок', +ps.bad || 0, 'за добу'],
+      ['clock', 'У черзі', P.queue, 'чекають відправки'], ['crown', 'Твоїх', P.mine, 'пристроїв'], ['gear', 'Браузер', P.web ? '✓' : '—', P.web ? 'Web Push працює' : 'потрібен HTTPS']]
       .map(([i, n, v, s2]) => `<div class="kpi"><img src="${IMG(i)}" alt=""><span>${n}</span><b>${v}</b><small>${s2}</small></div>`).join('')}</section>
-    <section class="adm-card glow">${aHead('megaphone', 'Нове сповіщення', 'приходить на телефон навіть коли гра закрита')}
+    <section class="adm-card glow">${aHead('megaphone', 'Нове сповіщення', 'приходить на телефон і в браузер, навіть коли гра закрита')}
       <label class="adm-f"><span>Кому <small>(нік або ID; порожньо — усім із застосунком)</small></span><input id="pq-to" value="${esc(f.to)}" placeholder="Усім гравцям"></label>
       <label class="adm-f"><span>Заголовок</span><input id="pq-title" maxlength="80" value="${esc(f.title)}" placeholder="Наприклад: 🔥 Вихідні з подвійними банкнотами!"></label>
       <label class="adm-f"><span>Текст</span><textarea id="pq-text" rows="2" maxlength="240" placeholder="Заходь у гру — на тебе чекає сюрприз">${esc(f.text)}</textarea></label>
@@ -599,7 +599,7 @@ async function admClick(e) {
   if (d.cdel) { if ((await aApi('adm_chat_del', { id: +d.cdel })).ok) { t.closest('.adm-row').remove(); admToast('Повідомлення видалено'); } return; }
   const act = d.act; if (!act) return;
   const P = ADM.cache.player && ADM.cache.player.player;
-  if (act === 'push-test') { const r = await aApi('adm_push_test'); if (r.ok) { admToast('Тест надіслано — згорни гру й подивись на телефон'); setTimeout(admRender, 2500); } else admToast(r.error === 'push_no_device' ? 'На твоєму акаунті немає телефона з застосунком' : 'Сповіщення не підключені', true); return; }
+  if (act === 'push-test') { const r = await aApi('adm_push_test'); if (r.ok) { admToast('Тест надіслано — згорни гру й подивись на телефон'); setTimeout(admRender, 2500); } else admToast(r.error === 'push_no_device' ? 'На твоєму акаунті немає ні застосунку, ні браузера з підпискою' : 'Сповіщення не підключені', true); return; }
   if (act === 'pgive') { ADM.gv = { to: P.nick, title: '', text: '' }; return admGo('give'); }
   if (act === 'ppush') { ADM.pq = { to: P.nick, title: '', text: '', open: '' }; return admGo('push'); }
   if (act === 'chat-post') { const i = document.getElementById('ac-text'), text = i.value.trim(); if (!text) return i.focus();
@@ -609,7 +609,7 @@ async function admClick(e) {
     pqSync(); const f = ADM.pq; if (!f.title.trim() || !f.text.trim()) return admToast('Заповни заголовок і текст', true);
     return admConfirm({ title: f.to.trim() ? `Надіслати гравцю ${esc(f.to)}?` : 'Надіслати ВСІМ гравцям?', text: `<b>${esc(f.title)}</b><br>${esc(f.text)}`, danger: false, yes: 'Надіслати' }, async () => {
       const r = await api('adm_push_send', { to: f.to.trim(), title: f.title, text: f.text, open: f.open }, { timeout: 15000 });
-      if (!r.ok) return admToast(r.error === 'push_no_device' ? 'У гравця немає застосунку' : r.error === 'not_found' ? 'Гравця не знайдено' : admErr(r.error), true);
+      if (!r.ok) return admToast(r.error === 'push_no_device' ? 'У гравця немає підписки на сповіщення' : r.error === 'not_found' ? 'Гравця не знайдено' : admErr(r.error), true);
       admToast(`Надіслано: ${r.n} гравц${r.n === 1 ? 'ю' : 'ям'}`); ADM.pq = { to: '', title: '', text: '', open: '' }; setTimeout(admRender, 1500); });
   }
   if (act === 'srv-save') { const v = id => document.getElementById(id); const r = await aApi('adm_settings', { save: 1, banner: v('sv-banner').value, maint: v('sv-maint').checked ? 1 : 0, maint_msg: v('sv-msg').value }); if (r.ok) { admToast('Налаштування збережено'); if (typeof netApplyCfg === 'function') netApplyCfg(r.cfg); admRender(); } return; }

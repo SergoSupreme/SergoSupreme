@@ -10,6 +10,8 @@ return [
   'db_pass' => getenv('GAME_DB_PASS') ?: 'f?Y.LsSZl@x~d.[@',
   // Ключ адміністратора для admin.php (зміни на свій довгий випадковий рядок!)
   'admin_key' => getenv('GAME_ADMIN_KEY') ?: 'zminy-mene-na-dovgyi-sekretnyi-kliuch',
+  // Контакт для служб сповіщень браузера (Web Push / VAPID). Їм треба знати, кому писати про проблеми.
+  'push_contact' => getenv('GAME_PUSH_CONTACT') ?: 'mailto:admin@example.com',
   // Звідки дозволені запити (домен гри). '*' — з будь-якого.
   'cors_origin' => '*',
 ];

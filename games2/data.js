@@ -4,7 +4,7 @@
 // ===================================================================
 const IMG = n => 'images/icons/' + n + '.png';
 const GAME_TITLE = 'Мій Хмарочос';
-const VERSION = '1.7';
+const VERSION = '1.8';
 const BUCK = 'cash';          // іконка банкнот
 const COIN = 'coin';          // іконка монет
 

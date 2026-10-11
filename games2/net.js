@@ -627,6 +627,7 @@ const pushCfg = () => (S.settings.push = S.settings.push || { all: true, off: []
 const pushOff = () => { const p = pushCfg(); return p.all === false ? ['all'] : (p.off || []); };
 let pushSig = '';
 function pushSync(force) {
+  if (webCan()) { if (force || webPerm() === 'granted') webSync(false); }
   if (!hasApp() || !NET.auth || !NET.online) return;
   let tok = ''; try { tok = HmApp.getPushToken() || ''; } catch (e) {}
   if (!tok) return;
@@ -635,8 +636,60 @@ function pushSync(force) {
   if (!force && sig === pushSig) return;
   pushSig = sig; api('push_reg', d).then(r => { if (!r.ok) pushSig = ''; });
 }
-function pushUnreg() { if (!hasApp()) return; try { const t = HmApp.getPushToken(); if (t) api('push_unreg', { token: t }); } catch (e) {} pushSig = ''; }
+function pushUnreg() {
+  if (hasApp()) { try { const t = HmApp.getPushToken(); if (t) api('push_unreg', { token: t }); } catch (e) {} }
+  webUnreg(); pushSig = '';
+}
 const pushAllowed = () => { try { return !hasApp() || typeof HmApp.notificationsAllowed !== 'function' || HmApp.notificationsAllowed(); } catch (e) { return true; } };
+
+// ---------- сповіщення в браузері (Web Push) ----------
+// Ті самі типи й ті самі налаштування груп, що й у застосунку. Працюють лише по HTTPS.
+const WEB = { reg: null, sub: null, key: '', sig: '', on: false };
+const webCan = () => !hasApp() && 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined'
+  && (location.protocol === 'https:' || location.hostname === 'localhost');
+const webPerm = () => { try { return Notification.permission; } catch (e) { return 'denied'; } };
+const b64ToU8 = b64 => { const p = (b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(p), a = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i); return a; };
+const u8ToB64 = buf => { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+
+async function webReg() {
+  if (!webCan() || !navigator.serviceWorker) return null;
+  if (WEB.reg) return WEB.reg;
+  try { WEB.reg = await navigator.serviceWorker.register('sw.js?v=' + VERSION); return WEB.reg; } catch (e) { return null; }
+}
+// Підписка на сповіщення. ask = true — питаємо дозвіл (лише у відповідь на дію гравця)
+async function webSync(ask) {
+  if (!webCan() || !NET.auth || !NET.online) return false;
+  const reg = await webReg(); if (!reg) return false;
+  if (webPerm() === 'default') { if (!ask) return false; try { if (await Notification.requestPermission() !== 'granted') return false; } catch (e) { return false; } }
+  if (webPerm() !== 'granted') return false;
+  if (!WEB.key) { const r = await api('webpush_key'); if (!r.ok || !r.key) return false; WEB.key = r.key; }
+  let sub = null;
+  try {
+    sub = await reg.pushManager.getSubscription();
+    const want = u8ToB64(b64ToU8(WEB.key));
+    if (sub && sub.options && sub.options.applicationServerKey && u8ToB64(sub.options.applicationServerKey) !== want) { await sub.unsubscribe(); sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(WEB.key) });
+  } catch (e) { return false; }
+  WEB.sub = sub;
+  const d = { endpoint: sub.endpoint, p256dh: u8ToB64(sub.getKey('p256dh')), auth: u8ToB64(sub.getKey('auth')),
+    lang: S.settings.lang || 'uk', tz: -new Date().getTimezoneOffset(), off: pushOff() };
+  const sig = NET.auth.player.id + '|' + JSON.stringify(d);
+  if (sig === WEB.sig) return true;
+  const r = await api('webpush_reg', d);
+  if (r.ok) { WEB.sig = sig; WEB.on = true; }
+  return !!r.ok;
+}
+function webUnreg() {
+  if (!WEB.sub) return; const ep = WEB.sub.endpoint;
+  try { WEB.sub.unsubscribe(); } catch (e) {}
+  api('webpush_unreg', { endpoint: ep }); WEB.sub = null; WEB.sig = ''; WEB.on = false;
+}
+// клік по сповіщенню у вже відкритій вкладці
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.mxOpen !== undefined) window.hmOpen(e.data.mxOpen); });
+// відкрили гру за посиланням зі сповіщення
+try { const u = new URL(location.href); if (u.searchParams.get('open')) { const t = u.searchParams.get('open'); u.searchParams.delete('open'); history.replaceState(null, '', u); setTimeout(() => window.hmOpen(t), 400); } } catch (e) {}
 // застосунок викликає, коли отримав/оновив токен
 window.hmPushToken = () => pushSync(true);
 // натиснули на сповіщення — відкриваємо потрібне місце гри

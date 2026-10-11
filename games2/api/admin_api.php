@@ -56,7 +56,7 @@ switch ($a) {
                    (SELECT COUNT(*) FROM promos WHERE active = 1 AND ends_at > NOW()) promos,
                    (SELECT COUNT(*) FROM players WHERE last_seen > NOW() - INTERVAL 7 DAY) wau,
                    (SELECT COUNT(*) FROM corps) corps,
-                   (SELECT COUNT(DISTINCT player_id) FROM push_tokens) apps,
+                   (SELECT COUNT(DISTINCT player_id) FROM (SELECT player_id FROM push_tokens UNION SELECT player_id FROM push_web) pt) apps,
                    (SELECT COUNT(*) FROM donations WHERE status = "pending") dpend,
                    (SELECT COALESCE(SUM(uah), 0) FROM donations WHERE status = "done" AND created_at > NOW() - INTERVAL 30 DAY) uah30')->fetch();
     $days = 30;
@@ -356,13 +356,13 @@ switch ($a) {
       'online' => (int)q('SELECT COUNT(*) FROM players WHERE last_seen > NOW() - INTERVAL 10 MINUTE')->fetchColumn()];
     $ps = q("SELECT SUM(res = 'sent') sent, SUM(res IN ('err','gone')) bad, COUNT(*) n FROM push_log WHERE created_at > NOW() - INTERVAL 1 DAY")->fetch();
     out(['ok' => true, 'cfg' => ['banner' => $c['banner'] ?? '', 'maint' => (int)($c['maint'] ?? 0), 'maint_msg' => $c['maint_msg'] ?? ''], 'db' => $db, 'srv' => $srv, 'php' => PHP_VERSION, 'time' => time(), 'pstat' => $ps,
-      'push' => ['on' => pushOn(), 'tokens' => (int)q('SELECT COUNT(*) FROM push_tokens')->fetchColumn(), 'queue' => (int)q('SELECT COUNT(*) FROM push_queue')->fetchColumn(), 'cron' => cronKey(),
-        'mine' => (int)q('SELECT COUNT(*) FROM push_tokens WHERE player_id = ?', [$adm['id']])->fetchColumn(),
+      'push' => ['on' => pushOn(), 'web' => wpOn(), 'tokens' => (int)q('SELECT COUNT(*) FROM push_tokens')->fetchColumn() + (int)q('SELECT COUNT(*) FROM push_web')->fetchColumn(), 'queue' => (int)q('SELECT COUNT(*) FROM push_queue')->fetchColumn(), 'cron' => cronKey(),
+        'mine' => (int)q('SELECT COUNT(*) FROM push_tokens WHERE player_id = ?', [$adm['id']])->fetchColumn() + (int)q('SELECT COUNT(*) FROM push_web WHERE player_id = ?', [$adm['id']])->fetchColumn(),
         'log' => q('SELECT l.kind, l.res, l.info, UNIX_TIMESTAMP(l.created_at) t, p.nick, p.id pid FROM push_log l LEFT JOIN players p ON p.id = l.player_id ORDER BY l.id DESC LIMIT 40')->fetchAll()]]);
   }
   case 'adm_push_test': { // тестове сповіщення на власні пристрої адміністратора — одразу, без затримок
     if (!pushOn()) fail('push_off');
-    if (!q('SELECT 1 FROM push_tokens WHERE player_id = ?', [$adm['id']])->fetchColumn()) fail('push_no_device');
+    if (!q('SELECT 1 FROM ' . PUSH_ANY . ' t WHERE player_id = ? LIMIT 1', [$adm['id']])->fetchColumn()) fail('push_no_device');
     pushTo((int)$adm['id'], 'test', [], 'mail'); out(['ok' => true]);
   }
   case 'adm_export': { // вивантаження гравців у таблицю (CSV)
@@ -378,12 +378,12 @@ switch ($a) {
     $to = trim((string)arg('to', ''));
     if ($to !== '') {
       $p = q('SELECT id, nick FROM players WHERE id = ? OR nick = ? LIMIT 1', [ctype_digit($to) ? (int)$to : 0, $to])->fetch(); if (!$p) fail('not_found');
-      if (!q('SELECT 1 FROM push_tokens WHERE player_id = ?', [$p['id']])->fetchColumn()) fail('push_no_device');
+      if (!q('SELECT 1 FROM ' . PUSH_ANY . ' t WHERE player_id = ? LIMIT 1', [$p['id']])->fetchColumn()) fail('push_no_device');
       pushTo((int)$p['id'], 'adm', ['title' => $title, 'text' => $text], $open); alog('push', $p['nick'], $title . ' — ' . $text);
       out(['ok' => true, 'n' => 1]);
     }
     pushAll('adm', ['title' => $title, 'text' => $text], $open); alog('push', 'всім', $title . ' — ' . $text);
-    out(['ok' => true, 'n' => (int)q('SELECT COUNT(DISTINCT player_id) FROM push_tokens')->fetchColumn()]);
+    out(['ok' => true, 'n' => (int)q('SELECT COUNT(DISTINCT player_id) FROM (SELECT player_id FROM push_tokens UNION SELECT player_id FROM push_web) pt')->fetchColumn()]);
   }
   case 'adm_tool': { // сервісні інструменти
     $what = (string)arg('what'); $res = '';
