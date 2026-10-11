@@ -94,7 +94,7 @@ function onlineSnap() {
   if (is_file($f) && filemtime($f) > time() - 300) return; @touch($f);
   try { q('INSERT IGNORE INTO online_log (t, n) SELECT ?, COUNT(*) FROM players WHERE last_seen > NOW() - INTERVAL 10 MINUTE', [intdiv(time(), 300) * 300]); q('DELETE FROM online_log WHERE t < ?', [time() - 30 * 86400]); } catch (Throwable $e) {}
 }
-function schemaFlag(): string { return sys_get_temp_dir() . '/mx_schema_v19_' . md5(cfg('db_name')); }
+function schemaFlag(): string { return sys_get_temp_dir() . '/mx_schema_v20_' . md5(cfg('db_name')); }
 // Звіряє ВСІ таблиці й колонки з install.sql: створює відсутні таблиці та додає відсутні колонки (стара або неповна база)
 function schemaSync() {
   $sql = (string)@file_get_contents(__DIR__ . '/install.sql');
@@ -631,6 +631,8 @@ try {
       ensureSchema(); @set_time_limit(120);
       @touch(sys_get_temp_dir() . '/mx_cron_' . md5(cfg('db_name')));
       try { tourFinalize(); } catch (Throwable $e) { error_log('[mx] cron tour ' . $e->getMessage()); }
+      // переговори з інвесторами закриваємо навіть якщо в грі вже нікого немає
+      try { require_once __DIR__ . '/invest.php'; invFinalizeAll(); } catch (Throwable $e) { error_log('[mx] cron invest ' . $e->getMessage()); }
       $t0 = microtime(true); do { pushRun(300); } while (microtime(true) - $t0 < 40 && (int)q('SELECT COUNT(*) FROM push_queue WHERE send_after <= UTC_TIMESTAMP()')->fetchColumn() > 0 && pushOn());
       out(['ok' => true, 'push' => pushOn(), 'queue' => (int)q('SELECT COUNT(*) FROM push_queue')->fetchColumn()]);
     }

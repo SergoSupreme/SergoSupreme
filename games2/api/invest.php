@@ -183,6 +183,13 @@ function invResult(array $inv): array {
     'parts' => array_map(fn($p) => ['id' => (int)$p['player_id'], 'nick' => $p['nick'], 'nn' => (int)$p['hits'],
       'share' => round((float)$p['share'], 1), 'rev' => (float)$p['rev']], invParts((int)$inv['id']))];
 }
+// Закриває всі переговори, час яких вийшов — для cron, якщо в грі нікого не лишилось
+function invFinalizeAll(): int {
+  $n = 0;
+  foreach (q('SELECT * FROM corp_invest WHERE state < 2 LIMIT 50')->fetchAll() as $inv)
+    if (invEnded($inv)) { invFinish((int)$inv['id']); $n++; }
+  return $n;
+}
 // Викликається із серця гри: якщо переговори щойно скінчилися — підбиваємо підсумки
 function invSweep(int $cid): ?array {
   $inv = invActive($cid); if (!$inv) return null;
@@ -253,6 +260,10 @@ function invDispatch(string $a, int $pid, array $me) {
       $inv = invActive($cid); if (!$inv) fail('inv_none');
       $r = invRound($inv); $m = invModeCfg((string)$inv['mode']);
       if ($r < 0 || $r >= $m['rounds']) fail('inv_over');
+      // відповідь мусить стосуватися того самого питання, яке гравець бачив: інакше через затримку
+      // мережі вона зарахувалася б наступному питанню, якого він ще не читав
+      $sawRound = (int)arg('round', $r);
+      if ($sawRound !== $r) fail('inv_round');
       $me_p = q('SELECT * FROM corp_invest_p WHERE inv_id = ? AND player_id = ?', [(int)$inv['id'], $pid])->fetch();
       if (!$me_p) fail('inv_not_in');
       if ((int)$me_p['last_round'] > $r || ((int)$me_p['last_round'] === $r && (int)$me_p['answers'] > 0)) fail('inv_answered');

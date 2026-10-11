@@ -2,10 +2,10 @@
 admin.js 574da2f481ebf2a2cee93425ed198784
 assets.js 26bf87232497e7ecc7b93f9e3405747c
 audio/bgm.mp3 28cd9c5d3e562c01a23d2671461952e1
-corp.js 8b1fa1ecd683816df9fbc6c03e00749e
+corp.js 7c77fd46bf31553f431b443622cf66fc
 data.js 06845d7683847f9fc3fbc8faa6a3c83f
 game.js facc8264179de54ce29a978c7be5111d
-i18n.js 39307def774e147424ecbfc42c8c72d8
+i18n.js d4e8118443eb83a46afb589aad873b5b
 images/avatars.png 5c35b574f413abd01ee211cb803b5616
 images/corp/badge_1.png 4266468152a9fa436786cfa62a258c41
 images/corp/badge_10.png c2abe7fb3587b081633fb42b31cf25cf

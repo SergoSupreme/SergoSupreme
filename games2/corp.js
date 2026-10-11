@@ -42,7 +42,8 @@ const corpErr = { no_corp: 'Ти не в корпорації', in_corp: 'Ти �
   ctask_not_done: 'Завдання ще не виконано', coll_cycle_done: 'Усі колекції циклу вже зібрано', bad_op: 'Помилка запиту',
   inv_day: 'Переговори бувають лише в понеділок, вівторок, суботу й неділю', inv_cool: 'Переговори можна проводити раз на 24 години',
   inv_on: 'Переговори вже тривають', inv_none: 'Зараз переговорів немає', inv_over: 'Переговори вже завершено',
-  inv_late: 'Збір завершено — приєднатися вже не можна', inv_not_in: 'Ти не береш участі в цих переговорах', inv_answered: 'Відповідь уже зараховано' };
+  inv_late: 'Збір завершено — приєднатися вже не можна', inv_not_in: 'Ти не береш участі в цих переговорах', inv_answered: 'Відповідь уже зараховано',
+  inv_round: 'Питання вже змінилося' };
 Object.assign(NET_ERR, corpErr);
 const cErr = e => netErr(e);
 let corpTab = 'mem', CORP = null, corpChatT = null, corpChat = [];
@@ -567,8 +568,9 @@ const invActions = {
   invans: async v => {
     const st = INV.st; if (!st || INV.sent === st.round + 1) return;
     INV.sent = st.round + 1; sfx('click');
-    const r = await api('corp_inv_answer', { opt: +v });
-    if (!r.ok) { INV.sent = 0; return toast(cErr(r.error), 'bz_office', true); }
+    const r = await api('corp_inv_answer', { opt: +v, round: st.round });
+    // inv_round — питання встигло змінитися, поки йшла відповідь: просто малюємо нове, без зайвого повідомлення
+    if (!r.ok) { INV.sent = 0; if (r.error !== 'inv_round') toast(cErr(r.error), 'bz_office', true); return invPoll(); }
     INV.hint = { round: st.round, pick: +v, right: r.right, hit: r.hit, gain: r.gain };
     if (r.inv) INV.st = r.inv;
     sfx(r.hit ? 'coin' : 'err'); if (r.hit) vibrate(20);
