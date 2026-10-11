@@ -28,7 +28,9 @@ function fmtT(s) {
   if (m) return m + 'хв ' + String(sec).padStart(2, '0') + 'с';
   return sec + 'с';
 }
-const bizDef = id => BUSINESSES.find(b => b.id === id);
+// пошук бізнесу по id — через мапу: find() по ~280 елементах викликався для кожного поверху щотакту
+const _bizMap = new Map(BUSINESSES.map(b => [b.id, b]));
+const bizDef = id => _bizMap.get(id);
 const dayKey = t => { const d = new Date(t * 1000); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
 
 // ===================================================================
@@ -93,7 +95,9 @@ const hotelFree = () => unemployed() < hotelCap();
 const workersOf = f => S.residents.filter(r => r.job === f.id);
 const workerAt = (f, i) => S.residents.find(r => r.job === f.id && r.pos === i);
 const floorById = id => S.floors.find(f => f.id === id);
-const floorIndex = f => S.floors.indexOf(f);
+// індекс поверху запам'ятовуємо при промальовці: пошук по масиву на кожен поверх давав квадратичну складність
+const _fidx = new WeakMap();
+const floorIndex = f => { const i = _fidx.get(f); return (i !== undefined && S.floors[i] === f) ? i : S.floors.indexOf(f); };
 const floorEl = f => document.querySelector('.floor[data-id="' + f.id + '"]');
 const tech = id => S.tech[id] || 0;
 const techTotal = () => TECH.reduce((a, t) => a + tech(t.id), 0);
@@ -639,7 +643,7 @@ function towerKinetic() {
   const setY = ny => { sc.scrollTop = Math.max(0, Math.min(max(), ny)); };
   const stopAnim = () => { cancelAnimationFrame(raf); raf = 0; };
   sc.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) return; const t = e.touches[0]; id = t.identifier; stopAnim(); follow = false;
+    if (e.touches.length > 1) return; const t = e.touches[0]; id = t.identifier; stopAnim(); towerScrollStop(); follow = false;
     startY = lastY = t.clientY; lastT = performance.now(); v = 0; moved = false; samples = [];
   }, { passive: true });
   sc.addEventListener('touchmove', e => {
@@ -664,6 +668,36 @@ function towerKinetic() {
   sc.addEventListener('touchcancel', () => { id = null; }, { passive: true });
   // після перетягування не «натискаємо» випадково на поверх
   sc.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+}
+// Плавний перехід по вежі. Дуже довгу дорогу не промальовуємо всю: підлітаємо ближче до цілі
+// одним кадром і м'яко доїжджаємо останні два екрани — навіть слабкий телефон устигає все домалювати.
+let scrollRaf = 0;
+const easeIO = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+function towerScrollStop() { cancelAnimationFrame(scrollRaf); scrollRaf = 0; }
+function towerScrollTo(target, dur0) {
+  const sc = $('#scroller'); if (!sc) return;
+  towerScrollStop(); follow = false;
+  const max = Math.max(0, sc.scrollHeight - sc.clientHeight);
+  target = Math.max(0, Math.min(max, target));
+  let from = sc.scrollTop;
+  if (Math.abs(target - from) < 2) { sc.scrollTop = target; return; }
+  const near = (sc.clientHeight || 600) * 2;
+  if (Math.abs(target - from) > near) { from = target + (from < target ? -near : near); sc.scrollTop = from; }
+  const dist = Math.abs(target - from), dur = dur0 || Math.min(720, Math.max(280, dist * .6)), t0 = performance.now();
+  towerScrolling = true;
+  const step = t => {
+    const p = Math.min(1, (t - t0) / dur);
+    sc.scrollTop = from + (target - from) * easeIO(p);
+    if (p < 1) { scrollRaf = requestAnimationFrame(step); return; }
+    scrollRaf = 0; towerScrolling = false; visFlush();
+    if (renderPending) { renderPending = false; render(); }
+  };
+  scrollRaf = requestAnimationFrame(step);
+}
+// підвести потрібний поверх до середини екрана
+function towerScrollToFloor(f, dur) {
+  const el = floorEl(f), sc = $('#scroller'); if (!el || !sc) return;
+  towerScrollTo(sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - sc.clientHeight / 2 + el.offsetHeight / 2, dur);
 }
 function towerScrollWatch() {
   const sc = $('#scroller'); if (!sc || sc._sw) return; sc._sw = true;
@@ -815,7 +849,7 @@ function startBuild(cat) {
   S.floors.push({ id: S.nextId++, type: 'building', cat, until: now() + dur, dur });
   S.stats.built++; sfx('build'); vibrate(30); netEvent('build', cat);
   closeModal(); save(); render();
-  setTimeout(() => $('#scroller').scrollTo({ top: 0, behavior: 'smooth' }), 60);
+  setTimeout(() => towerScrollTo(0), 60);
 }
 function cutRibbon(f) {
   const el = floorEl(f); if (!el || el._cut) return;
@@ -994,11 +1028,12 @@ function mainBtn(f) {
 const btnHTML = b => `<div class="fbtn ${b.cls}" data-act="main"><img src="${IMG(b.img)}" alt="">${b.label !== undefined ? `<b>${b.label}</b>` : ''}</div>`;
 
 const hotelStars = l => `<div class="stars5 onpic hstars">${[0, 1, 2, 3, 4].map(i => { const p = Math.max(0, Math.min(1, (l - i * 8) / 8)) * 100; return `<i class="${p >= 100 ? 'on' : ''}" style="${p > 0 && p < 100 ? `background:linear-gradient(90deg,#ffd23a ${p}%,#6b7698 ${p}%)` : ''}"></i>`; }).join('')}</div>`;
-function skeleton(f) {
-  const idx = floorIndex(f);
+// html — функція: рядок збирається лише тоді, коли ключ змінився і поверх треба перемалювати
+function skeleton(f, idx) {
+  if (idx === undefined) idx = floorIndex(f);
   if (f.type === 'lobby') {
     const st = LOBBY.style(S.lobbyLvl);
-    return { key: `lobby|${st}`, html: `<div class="lobby-scene">
+    return { key: `lobby|${st}`, html: () => `<div class="lobby-scene">
         ${st >= 3 ? '<div class="chandelier"></div>' : ''}
         <div class="desk"><img src="${IMG('bell')}" alt=""></div>
         
@@ -1012,19 +1047,19 @@ function skeleton(f) {
   const head = (name, color) => `<div class="fhead" style="--cat:${color}"><span class="fno">${idx}</span><span class="fname">${name}</span></div>`;
   if (f.type === 'building') {
     const c = CATS[f.cat];
-    return { key: 'building|' + f.cat, html: `${head('Будівництво', '#ffb92e')}
+    return { key: 'building|' + f.cat, html: () => `${head('Будівництво', '#ffb92e')}
       <div class="fbox"><div class="sbar build"><i data-p="prog"></i><span data-p="time"></span></div></div>
       <div class="fpic building"><img class="pic-room" src="${IMG('crane')}" alt=""><img class="cat-ghost" src="${IMG(c.img)}" alt=""><img class="builder" src="${IMG('ch_1')}" alt=""></div>
       <div data-p="btn"></div>` };
   }
   if (f.type === 'ready') {
     const c = CATS[f.cat];
-    return { key: 'ready|' + f.cat, html: `${head(c.name + ': готово!', c.color)}
+    return { key: 'ready|' + f.cat, html: () => `${head(c.name + ': готово!', c.color)}
       <div class="fpic ready" style="--cat:${c.color}"><img class="pic-room" src="${IMG(c.img)}" alt=""><div class="ribbon"><i class="rl"></i><i class="rr"></i><span class="bow"></span><b>Будівництво завершено</b><small>Торкнись, щоб перерізати стрічку</small></div></div>
       <div data-p="btn"></div>` };
   }
   if (f.type === 'hotel') {
-    return { key: `hotel|${f.lvl}`, html: `${head(HOTEL.name, '#ffc531')}
+    return { key: `hotel|${f.lvl}`, html: () => `${head(HOTEL.name, '#ffc531')}
       <div class="fbox"><div class="hinfo" data-p="hinfo"></div></div>
       <div class="fpic hotelpic"><img class="pic-room" src="${IMG(HOTEL.room)}" alt="">${hotelStars(f.lvl)}</div>
       <div data-p="btn"></div>` };
@@ -1032,7 +1067,7 @@ function skeleton(f) {
   const b = bizDef(f.biz), c = CATS[b.cat];
   const crew = [0, 1, 2].map(i => workerAt(f, i)).filter(Boolean);
   return { key: `biz|${f.biz}|${f.stars}|${crew.map(r => r.ch + r.rank + isHappy(r) + (r.stars || 0)).join()}`,
-    html: `${head(b.name, c.color)}
+    html: () => `${head(b.name, c.color)}
       <div class="fbox" data-p="box"></div>
       <div class="fpic" style="--cat:${c.color}">
         <img class="pic-room" src="${IMG(b.room)}" alt="">
@@ -1060,12 +1095,32 @@ const visObs = 'IntersectionObserver' in window ? new IntersectionObserver(es =>
     const el = e.target, on = e.isIntersecting;
     if (el.classList.contains('floor')) { const id = +el.dataset.id; if (on) FVIS.add(id); else FVIS.delete(id); }
     else if (el.classList.contains('road')) roadVis = on;
-    if (towerScrolling) visPend.set(el, on); else el.classList.toggle('vis', on); // під час гортання класи не чіпаємо — застосуємо після зупинки
+    if (towerScrolling) visPend.set(el, on); else { el.classList.toggle('vis', on); if (on) paintIfStale(el); } // під час гортання класи не чіпаємо — застосуємо після зупинки
   }
 }, { rootMargin: '120px 0px' }) : null;
 const visPend = new Map();
-function visFlush() { if (!visPend.size) return; visPend.forEach((on, el) => el.classList.toggle('vis', on)); visPend.clear(); }
+function visFlush() { if (!visPend.size) return; visPend.forEach((on, el) => { el.classList.toggle('vis', on); if (on) paintIfStale(el); }); visPend.clear(); }
 function visWatch(el) { if (visObs && el && !el._vw) { el._vw = 1; visObs.observe(el); } else if (!visObs && el) el.classList.add('vis'); }
+
+// вміст одного поверху: каркас (лише коли змінився ключ) і динамічні частини
+function paintFloor(el, f, i) {
+  el._stale = 0;
+  const sk = skeleton(f, i);
+  if (el._key !== sk.key) { el.innerHTML = sk.html() + '<div class="led"></div>'; el._key = sk.key; el._dyn = {}; }
+  const dy = dynamic(f);
+  for (const k in dy) {
+    if (el._dyn[k] === dy[k]) continue;
+    el._dyn[k] = dy[k];
+    const p = el.querySelector('[data-p="' + k + '"]'); if (!p) continue;
+    if (k === 'prog') p.style.width = dy[k] + '%'; else p.innerHTML = dy[k];
+  }
+}
+// поверх з'явився в полі зору — домальовуємо його одразу, без очікування наступного такту
+function paintIfStale(el) {
+  if (!el || !el._stale) return;
+  const i = el._i, f = S.floors[i];
+  if (f) paintFloor(el, f, i);
+}
 
 function render() {
   const wrap = $('#floors');
@@ -1076,17 +1131,11 @@ function render() {
     els = [...wrap.children]; els.forEach(visWatch);
   }
   els.forEach((el, i) => {
-    const f = S.floors[i];
+    const f = S.floors[i]; _fidx.set(f, i); el._i = i;
     const cls = floorClass(f, i); if (el.className !== cls) el.className = cls;
-    const sk = skeleton(f);
-    if (el._key !== sk.key) { el.innerHTML = sk.html + '<div class="led"></div>'; el._key = sk.key; el._dyn = {}; }
-    const dy = dynamic(f);
-    for (const k in dy) {
-      if (el._dyn[k] === dy[k]) continue;
-      el._dyn[k] = dy[k];
-      const p = el.querySelector('[data-p="' + k + '"]'); if (!p) continue;
-      if (k === 'prog') p.style.width = dy[k] + '%'; else p.innerHTML = dy[k];
-    }
+    // поверх далеко за екраном не перемальовуємо — його оновимо, щойно він з'явиться у полі зору
+    if (el._key && !FVIS.has(f.id) && i !== carAt) { el._stale = 1; return; }
+    paintFloor(el, f, i);
   });
 
   $('#coins').textContent = fmt(S.coins);
@@ -1500,7 +1549,7 @@ function floorNav(f) {
   const box = document.createElement('div'); box.className = 'fnav-col';
   box.innerHTML = `<div class="fnav"><button class="fnav-b l" ${prev ? '' : 'disabled'} aria-label="Попередній поверх"><img src="${IMG('arr_blue')}" alt=""></button><button class="fnav-b r" ${next ? '' : 'disabled'} aria-label="Наступний поверх"><img src="${IMG('arr_blue')}" alt=""></button></div>`;
   x.replaceWith(box); box.appendChild(x);
-  const go = g => { if (!g) return; openBiz(g); const el = floorEl(g), sc = $('#scroller'); if (el && sc) sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - sc.clientHeight / 2 + el.offsetHeight / 2; };
+  const go = g => { if (!g) return; openBiz(g); towerScrollToFloor(g, 320); };
   box.querySelector('.l').onclick = e => { e.stopPropagation(); go(prev); };
   box.querySelector('.r').onclick = e => { e.stopPropagation(); go(next); };
 }
@@ -2628,8 +2677,8 @@ function init() {
   $('#build-btn').onclick = openBuild;
   $('#car').onclick = () => ride();
   $('#side-lift').onclick = () => askDeliverAll();
-  $('#side-up').onclick = () => sc.scrollTo({ top: 0, behavior: 'smooth' });
-  $('#side-down').onclick = () => sc.scrollTo({ top: sc.scrollHeight, behavior: 'smooth' });
+  $('#side-up').onclick = () => { sfx('click'); towerScrollTo(0); };
+  $('#side-down').onclick = () => { sfx('click'); towerScrollTo(sc.scrollHeight); };
   $('#nav-ops').onclick = () => { if (opsMode()) openOps(); };
   $('#nav-res').onclick = () => openResidents();
   $('#nav-shop').onclick = () => openShop();

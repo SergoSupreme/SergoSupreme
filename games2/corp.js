@@ -401,24 +401,47 @@ function invSig() {
 }
 function invPaint(force) {
   if (!corpShowing() || corpTab !== 'inv') return;
+  if (INV.st && INV.shownId !== INV.st.id) { INV.shownId = INV.st.id; invPctShown = 0; }
   const sig = invSig(); if (!force && sig === INV.sig) return;
   INV.sig = sig; $('#m-body')._h = null; modalRefresh(); invTick();
 }
-// Живі цифри без перемальовування вікна
-function invTick() {
+// Живі цифри й смужки — покадрово, без перемальовування вікна.
+// Смужки рухає transform: scaleX — це не змушує браузер перераховувати верстку, тож плавно навіть на слабких телефонах.
+let invRaf = 0, invPctShown = 0, invFrameT = 0;
+const setFill = (el, k) => { if (el) el.style.transform = 'scaleX(' + Math.max(0, Math.min(1, k)).toFixed(4) + ')'; };
+const setText = (el, v) => { if (el && el.textContent !== v) el.textContent = v; };
+function invAnim(on) {
+  cancelAnimationFrame(invRaf); invRaf = 0;
+  if (!on) return;
+  invFrameT = performance.now();
+  const frame = t => {
+    if (!corpShowing() || corpTab !== 'inv') { invRaf = 0; return; }
+    invRaf = requestAnimationFrame(frame);
+    const dt = Math.min(.1, (t - invFrameT) / 1000); invFrameT = t;
+    if (!document.hidden) invTick(dt);
+  };
+  invRaf = requestAnimationFrame(frame);
+}
+function invTick(dt = .016) {
   const st = INV.st, b = $('#m-body'); if (!b) return;
-  if (!st) { const c = b.querySelector('.inv-cool'); if (c) c.textContent = fmtT(invCool()); return; }
+  if (!st) { setText(b.querySelector('.inv-cool'), fmtT(invCool())); return; }
   const now = Date.now() / 1000;
   if (st.st === 'lobby') {
-    const bar = b.querySelector('.ivl-lobby i');
-    if (bar) bar.style.width = Math.max(0, Math.min(100, 100 - (st.begin - now) / INVEST.lobby * 100)) + '%';
+    const left = Math.max(0, st.begin - now);
+    setFill(b.querySelector('.ivl-lobby i'), 1 - left / INVEST.lobby);
+    setText(b.querySelector('.ivl-clock b'), fmtT(left));
     return;
   }
   const left = Math.max(0, st.r_ends - now);
-  const sec = b.querySelector('.ivl-sec'); if (sec) { sec.textContent = Math.ceil(left); sec.classList.toggle('hot', left <= 5); }
-  const t = b.querySelector('.ivl-tick i'); if (t) t.style.width = Math.max(0, left / st.sec * 100) + '%';
-  const p = b.querySelector('.ivl-prog i'); if (p) p.style.width = Math.min(100, st.pct) + '%';
-  const pt = b.querySelector('.ivl-prog span'); if (pt) pt.textContent = tr('Прогрес команди') + ' ' + st.pct + '%';
+  const sec = b.querySelector('.ivl-sec');
+  if (sec) { setText(sec, String(Math.ceil(left))); sec.classList.toggle('hot', left <= 5); }
+  setFill(b.querySelector('.ivl-tick i'), left / st.sec);
+  // прогрес команди підповзає до серверного значення, а не стрибає раз на секунду
+  const want = Math.min(100, st.pct);
+  invPctShown += (want - invPctShown) * Math.min(1, dt * 7);
+  if (Math.abs(want - invPctShown) < .05) invPctShown = want;
+  setFill(b.querySelector('.ivl-prog i'), invPctShown / 100);
+  setText(b.querySelector('.ivl-prog span'), tr('Прогрес команди') + ' ' + st.pct + '%');
 }
 async function invLoad(soft) {
   const r = await api('corp_inv_info'); if (!r.ok) { if (!soft) toast(cErr(r.error), 'bz_office', true); return; }
@@ -439,13 +462,13 @@ async function invPoll() {
   } finally { INV.busy = false; }
 }
 function invTimer(on) {
-  clearInterval(INV.t); INV.t = null;
+  clearInterval(INV.t); INV.t = null; invAnim(on);
   if (!on) return;
   let tick = 0;
   INV.t = setInterval(() => {
     if (!corpShowing() || corpTab !== 'inv') { invTimer(false); return; }
     if (document.hidden) return;
-    tick++; invTick();
+    tick++;
     // під час переговорів питаємо сервер щосекунди, без них — раз на 5 секунд
     if (INV.st) invPoll(); else if (tick % 5 === 0) invPoll();
   }, 1000);
@@ -531,8 +554,8 @@ function invLobbyHTML(st, C) {
   const bonus = Math.min(1, myRev / Math.max(1, invRevNeed(m, st.lvl)));
   let h = `<div class="inv-live lobby" style="--mc:${m.color}">
     <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Інвестори вже в дорозі')}</b><small>${tr(m.name)} · ${invDur(m)} · ${st.rounds} ${tr('питань')}</small></div></div>
-    <div class="ivl-clock"><span>${tr('Початок через')}</span><b data-end="${st.begin}">${fmtT(Math.max(0, st.begin - Date.now() / 1000))}</b></div>
-    <div class="cb-bar big ivl-lobby"><i style="width:0%"></i></div></div>`;
+    <div class="ivl-clock"><span>${tr('Початок через')}</span><b>${fmtT(Math.max(0, st.begin - Date.now() / 1000))}</b></div>
+    <div class="ivbar ivl-lobby"><i></i></div></div>`;
   if (mine.in) {
     h += `<div class="inv-me ok"><img src="${CSRC('ic_4')}" alt=""><div class="grow"><b>${tr('Ти в переговорній')}</b>
         <small>${tr('Зафіксована виручка/год')}: <b>${fmt(mine.rev)}</b> · ${tr('вага відповіді')} <b>×${mine.mul}</b></small></div></div>`;
@@ -555,8 +578,8 @@ function invRunHTML(st, C) {
   let h = `<div class="inv-live run" style="--mc:${m.color}">
     <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Переговори')} · ${tr(m.name)}</b>
       <small>${tr('Питання')} ${Math.min(st.round + 1, st.rounds)} ${tr('з')} ${st.rounds}</small></div><em class="ivl-sec">${Math.ceil(left)}</em></div>
-    <div class="cb-bar big ivl-prog"><i style="width:0%"></i><span></span></div>
-    <div class="ivl-tick"><i style="width:100%"></i></div></div>`;
+    <div class="ivbar big ivl-prog"><i></i><span></span></div>
+    <div class="ivbar thin ivl-tick"><i></i></div></div>`;
 
   if (!mine.in) {
     h += `<div class="inv-me no"><img src="${CSRC('ic_7')}" alt=""><div class="grow"><b>${tr('Ти не встиг на збір')}</b><small>${tr('Можна лише спостерігати. Наступного разу приєднуйся за 5 хвилин до початку.')}</small></div></div>`;

@@ -2947,15 +2947,26 @@ img.ri, #toast span img.ri, .don-cf-bonus img.ri { display: inline-block; width:
 .ivl-top img { width: 42px; height: 42px; object-fit: contain; flex: none; }
 .ivl-top b { display: block; font: 900 15px var(--body); color: #fff; }
 .ivl-top small { display: block; font: 800 11px var(--body); color: #cfe0ff; }
-.ivl-sec { font-style: normal; font-family: var(--display); font-size: 26px; color: #ffe27a; min-width: 38px; text-align: right; }
-.ivl-sec.hot { color: #ff8b7a; animation: badgepop .7s infinite; }
+.ivl-sec { font-style: normal; font-family: var(--display); font-size: 28px; line-height: 1; color: #ffe27a; min-width: 44px; text-align: center;
+  padding: 5px 8px; border-radius: 12px; background: rgba(4,10,32,.5); border: 1px solid rgba(255,197,49,.35); font-variant-numeric: tabular-nums; }
+.ivl-sec.hot { color: #ff8b7a; border-color: rgba(255,120,100,.6); background: rgba(90,20,15,.45); animation: ivPulse .9s ease-in-out infinite alternate; }
+@keyframes ivPulse { from { box-shadow: 0 0 0 0 rgba(255,120,100,0); } to { box-shadow: 0 0 14px 2px rgba(255,120,100,.45); } }
 .ivl-clock { display: flex; align-items: baseline; justify-content: center; gap: 7px; margin: 9px 0 4px; }
 .ivl-clock span { font: 800 12px var(--body); color: #cfe0ff; }
 .ivl-clock b { font-family: var(--display); font-size: 28px; color: #ffe27a; }
-.cb-bar.big { height: 18px; } .cb-bar.big span { line-height: 18px; font-size: 11px; }
-.ivl-prog { margin-top: 9px; }
-.ivl-tick { height: 5px; margin-top: 7px; border-radius: 4px; background: rgba(0,0,0,.4); overflow: hidden; }
-.ivl-tick i { display: block; height: 100%; background: linear-gradient(90deg, #ffd96b, #ff8b3a); transition: width .9s linear; }
+/* Смужки переговорів: заповнення рухається через transform, тож браузер не перераховує верстку щокадру */
+.ivbar { position: relative; height: 12px; margin-top: 9px; border-radius: 7px; overflow: hidden;
+  background: rgba(4,10,32,.65); border: 1px solid rgba(90,120,210,.45); box-shadow: inset 0 2px 5px rgba(0,0,0,.45); }
+.ivbar > i { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); border-radius: 6px;
+  background: linear-gradient(90deg, #3fd3ff, #7dffa0); box-shadow: 0 0 10px rgba(80,220,160,.45); }
+.ivbar > span { position: relative; display: block; text-align: center; font: 900 11px/20px var(--body); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+.ivbar.big { height: 20px; border-radius: 10px; }
+.ivbar.big > i { border-radius: 9px; }
+/* риска «мета» на 100%: видно, скільки лишилось до успіху */
+.ivbar.big::after { content: ''; position: absolute; right: 2px; top: 2px; bottom: 2px; width: 2px; border-radius: 2px; background: rgba(255,255,255,.35); }
+.ivbar.thin { height: 6px; margin-top: 7px; border-radius: 4px; }
+.ivbar.thin > i { border-radius: 3px; background: linear-gradient(90deg, #ffd96b, #ff8b3a); box-shadow: 0 0 8px rgba(255,160,60,.5); }
+.ivl-prog { margin-top: 10px; }
 
 .inv-me { display: flex; align-items: center; gap: 9px; padding: 9px 11px; margin-bottom: 9px; border-radius: 14px;
   background: #16214f; border: 1.5px solid #34489a; }
