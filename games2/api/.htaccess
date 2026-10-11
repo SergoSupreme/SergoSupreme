@@ -1,0 +1,8 @@
+# Захист службових файлів
+<FilesMatch "^(config\.php|db\.php|install\.sql|firebase-key\.json|.*\.json)$">
+  Require all denied
+</FilesMatch>
+Options -Indexes
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/json
+</IfModule>
