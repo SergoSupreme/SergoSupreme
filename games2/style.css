@@ -3008,6 +3008,14 @@ img.ri, #toast span img.ri, .don-cf-bonus img.ri { display: inline-block; width:
 
 /* ======================= Коди в налаштуваннях гри ======================= */
 .cdbox { background: linear-gradient(#1b2a66, #111b4a); border: 1.5px solid #34489a; border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+.cd-h { display: flex; align-items: center; gap: 9px; margin-bottom: 2px; }
+.cd-h img { width: 32px; height: 32px; object-fit: contain; flex: none; }
+.cd-h b { display: block; font: 900 14px var(--body); color: #fff; }
+.cd-h small { display: block; font: 800 11px/1.3 var(--body); color: #9fb2e8; margin-top: 1px; }
+.cd-note { margin-top: 8px; font: 800 12px var(--body); color: #9fb2e8; text-align: center; }
+.cd-note b { color: #ffd978; font-size: 13px; }
+.cd-done { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding: 9px 10px; border-radius: 12px;
+  font: 800 12px var(--body); color: #7dffa0; background: rgba(60,207,90,.12); border: 1px solid rgba(60,207,90,.35); }
 .cd-in { display: flex; gap: 6px; margin-top: 8px; }
 .cd-in input { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase;
   background: #0a1236; border: 1.5px solid #2f4390; border-radius: 12px; color: #fff; font-weight: 800; font-size: 15px; padding: 10px 12px; }

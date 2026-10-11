@@ -2166,7 +2166,8 @@ function openMenu() {
     login: () => { closeModal(); const L = document.createElement('div'); L.id = 'loader'; L.className = 'authing'; L.innerHTML = '<div class="ld-bg"></div><div class="ld-shade"></div>'; document.body.appendChild(L); showAuth(() => { L.classList.add('dark'); setTimeout(() => L.remove(), 700); }); },
     fs: () => { st.fullscreen = st.fullscreen === false; save(); if (st.fullscreen !== false) goFullscreen(); else if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); modalRefresh(); },
     notif: () => { st.notif = st.notif === false; sfx('click'); save(); modalRefresh(); },
-    code: () => codeSubmit(),
+    code: () => codeSubmit('cd-input'),
+    codeinv: () => codeSubmit('cd-inv'),
     codecopy: () => { const c = CODES.info && CODES.info.code; if (!c) return;
       try { navigator.clipboard.writeText(c); } catch (e) {}
       sfx('ding'); toast(tr('Код скопійовано') + ': ' + c, 'keys'); },
@@ -2730,22 +2731,28 @@ async function codeLoad(force) {
 }
 function codeBoxHTML() {
   const I = CODES.info;
-  let h = `<div class="cdbox"><div class="note small" style="margin:0">${tr('Уводь бонус-коди від адміністрації — і код запрошення того, хто покликав тебе в гру.')}</div>
+  // Бонус-коди від адміністрації з'являються знову і знову, тож це поле лишається назавжди
+  let h = `<div class="cdbox"><div class="cd-h"><img src="${IMG('keys')}" alt=""><div class="grow">
+      <b>${tr('Бонус-код')}</b><small>${tr('Коди від адміністрації — шукай їх у чаті та новинах гри.')}</small></div></div>
     <div class="cd-in"><input id="cd-input" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${tr('Твій код')}">
-      <button class="btn gold shine" data-a="code">${tr('Застосувати')}</button></div>`;
-  if (!I) return h + `<div class="note small" style="margin-top:8px">${tr('Завантаження…')}</div></div>`;
-  h += `<div class="cd-my"><img src="${IMG('keys')}" alt=""><div class="grow"><small>${tr('Твій код запрошення')}</small><b>${esc(I.code || '—')}</b></div>
+      <button class="btn gold shine" data-a="code">${tr('Застосувати')}</button></div></div>`;
+  if (!I) return h + `<div class="note small">${tr('Завантаження…')}</div>`;
+
+  // Код запрошення вводиться лише раз — після цього поле зникає, лишається тільки власний код
+  h += `<div class="cdbox"><div class="cd-h"><img src="${IMG('friends')}" alt=""><div class="grow">
+      <b>${tr('Код запрошення')}</b><small>${tr('Поділись своїм кодом із друзями, яких кличеш у гру.')}</small></div></div>
+    <div class="cd-my"><img src="${IMG('keys')}" alt=""><div class="grow"><small>${tr('Твій код запрошення')}</small><b>${esc(I.code || '—')}</b></div>
       <button class="cd-copy" data-a="codecopy">${tr('Копіювати')}</button></div>`;
-  const left = [];
-  if (I.invited) left.push(`${tr('За твоїм кодом прийшли')}: <b>${I.invited}</b>`);
-  if (I.used) left.push(I.by ? `${tr('Ти вже ввів(ла) код гравця')} ${esc(I.by)}` : tr('Код запрошення вже введено'));
-  else if (I.level < I.need) left.push(`${tr('Ввести чужий код запрошення можна з')} ${I.need} ${tr('рівня')} (${tr('твій')}: ${I.level})`);
-  else left.push(`${tr('Можеш ввести код того, хто покликав тебе — обидва отримаєте по')} ${I.bonus} ${tr('банкнот')}`);
-  h += `<div class="note small" style="margin:8px 0 0">${left.join('<br>')}</div></div>`;
-  return h;
+  if (I.invited) h += `<div class="cd-note">${tr('За твоїм кодом прийшли')}: <b>${I.invited}</b></div>`;
+  if (I.used) h += `<div class="cd-done">✓ ${I.by ? `${tr('Ти вже ввів(ла) код гравця')} ${esc(I.by)}` : tr('Код запрошення вже введено')}</div>`;
+  else if (I.level < I.need) h += `<div class="note small" style="margin:8px 0 0">${tr('Ввести чужий код запрошення можна з')} ${I.need} ${tr('рівня')} (${tr('твій')}: ${I.level})</div>`;
+  else h += `<div class="note small" style="margin:8px 0 0">${tr('Можеш ввести код того, хто покликав тебе — обидва отримаєте по')} ${I.bonus} ${tr('банкнот')}</div>
+    <div class="cd-in"><input id="cd-inv" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${tr('Код друга')}">
+      <button class="btn green shine" data-a="codeinv">${tr('Застосувати')}</button></div>`;
+  return h + '</div>';
 }
-async function codeSubmit() {
-  const el = $('#cd-input'); if (!el || CODES.busy) return;
+async function codeSubmit(id) {
+  const el = $('#' + (id || 'cd-input')); if (!el || CODES.busy) return;
   const code = String(el.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length < 4) { sfx('err'); return toast(tr('Введи код'), 'keys'); }
   CODES.busy = true;

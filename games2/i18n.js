@@ -1096,6 +1096,11 @@ Object.assign(I18N, {
   "хв": ["min", "мин", "Min", "min", "min", "分", "분", "分钟"],
   "с": ["s", "с", "s", "s", "s", "秒", "초", "秒"],
   "по": ["of", "по", "à je", "de", "da", "×", "문항당", "每题"],
+  "Бонус-код": ["Bonus code", "Бонус-код", "Bonuscode", "Code bonus", "Codice bonus", "ボーナスコード", "보너스 코드", "奖励码"],
+  "Коди від адміністрації — шукай їх у чаті та новинах гри.": ["Codes from the team — look for them in the chat and game news.", "Коды от администрации — ищи их в чате и новостях игры.", "Codes vom Team — such sie im Chat und in den Spielnews.", "Codes de l’équipe — cherche-les dans le chat et les actus.", "Codici dal team — cercali in chat e nelle news.", "運営からのコード — チャットやお知らせで探そう。", "운영진의 코드 — 채팅과 게임 소식에서 찾아보세요.", "官方代码——在聊天和游戏公告里找找。"],
+  "Код запрошення": ["Invite code", "Код приглашения", "Einladungscode", "Code d’invitation", "Codice invito", "招待コード", "초대 코드", "邀请码"],
+  "Поділись своїм кодом із друзями, яких кличеш у гру.": ["Share your code with the friends you bring into the game.", "Поделись своим кодом с друзьями, которых зовёшь в игру.", "Teile deinen Code mit Freunden, die du ins Spiel holst.", "Partage ton code avec les amis que tu invites.", "Condividi il tuo codice con gli amici che inviti.", "ゲームに誘う友だちにコードを教えよう。", "게임에 초대할 친구에게 코드를 알려주세요.", "把你的码分享给你邀请的朋友。"],
+  "Код друга": ["Friend’s code", "Код друга", "Code des Freundes", "Code de l’ami", "Codice dell’amico", "友だちのコード", "친구의 코드", "朋友的码"],
   "тобі": ["for you", "тебе", "für dich", "pour toi", "per te", "あなたに", "당신에게", "给你"],
   "Корпорація та інвестори": ["Corporation and investors", "Корпорация и инвесторы", "Konzern und Investoren", "Corporation et investisseurs", "Corporazione e investitori", "企業と投資家", "기업과 투자자", "公司与投资人"],
 });

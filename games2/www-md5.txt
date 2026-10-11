@@ -3,9 +3,9 @@ admin.js b41da49264a3048c7db88503ef58b2e9
 assets.js 26bf87232497e7ecc7b93f9e3405747c
 audio/bgm.mp3 28cd9c5d3e562c01a23d2671461952e1
 corp.js 7de4be6b2fa664bed0f1bb65043f5d69
-data.js 50f345993cab8a702055c833acaa13a7
-game.js 56ab64eb7ac4e6d6e0b41eb3e8b8c06b
-i18n.js 26590f51539377fd56bd2a0d681db103
+data.js 013d0a76902ee4f8cb39ea05423824a5
+game.js e6a36913e4939fd0198cc05ae59bbf9d
+i18n.js c8e2409d1828eaf7ef3fe06b9ad5117d
 images/avatars.png 5c35b574f413abd01ee211cb803b5616
 images/corp/badge_1.png 4266468152a9fa436786cfa62a258c41
 images/corp/badge_10.png c2abe7fb3587b081633fb42b31cf25cf
@@ -1044,9 +1044,9 @@ images/tut/g8.webp 3930995c63b2294a88c2c1d50e82e845
 images/tut/g9.webp 9cc158db9c71efdae615d3f1b63aebf8
 images/ui/star_off.png dde71197c7c4675932a03882592b4b02
 images/ui/star_on.png 3df040c142e630c3b0389d10c05f1d9a
-index.html 0205b34621d86a7a4aa3b5c114673283
+index.html b031e270b196ab37c872b34c3dc33285
 manifest.json 38a99b347725d46f88ccb2d36d4c7b0c
 net.js 9c6b036467403b1e77cd7b63fc839344
-style.css 1e602eb3fa5733334bbd1aa5af4d8147
+style.css 1fdbbac78eef3e51da885e8100a388ae
 sw.js 7506b53499aca3bde44ecb164901f67f
 tut.js 8a26370ce80b06b5a3b8d3e8e4a48404
