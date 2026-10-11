@@ -224,9 +224,12 @@ switch ($a) {
     if ((int)arg('push', 1)) { if ($pid) pushTo((int)$pid, 'give', [], 'mail', 'give'); else pushAll('give', [], 'mail'); }
     alog('give', $pid ? $to : 'всім', $rw); out(['ok' => true]);
   }
+  // Історія — суто роздачі адміністрації. Нагороди корпорацій, турнірів, донатів і подарунки гравців сюди не потрапляють
   case 'adm_gives': {
-    out(['ok' => true, 'items' => q('SELECT m.id, m.title, m.reward, UNIX_TIMESTAMP(m.created_at) t, p.nick, (SELECT COUNT(*) FROM mail_claims c WHERE c.mail_id = m.id) claims
-                                     FROM mail m LEFT JOIN players p ON p.id = m.player_id WHERE m.reward IS NOT NULL ORDER BY m.id DESC LIMIT 30')->fetchAll()]);
+    out(['ok' => true, 'items' => q("SELECT m.id, m.title, m.reward, UNIX_TIMESTAMP(m.created_at) t, p.nick, (SELECT COUNT(*) FROM mail_claims c WHERE c.mail_id = m.id) claims
+                                     FROM mail m LEFT JOIN players p ON p.id = m.player_id
+                                     WHERE m.reward IS NOT NULL AND m.sender NOT IN ('Корпорація', 'Магазин', 'Турнір', 'Система')
+                                       AND m.reward NOT LIKE '%corpinv%' ORDER BY m.id DESC LIMIT 30")->fetchAll()]);
   }
 
   // ---------- акції ----------

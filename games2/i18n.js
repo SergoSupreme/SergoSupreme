@@ -238,7 +238,7 @@ Object.assign(I18N, {"Форум": ["Forum", "Форум", "Forum", "Forum", "Fo
 Object.assign(I18N, {"Завантажуємо графіку вежі…": ["Loading tower graphics…", "Загружаем графику башни…", "Lade Turmgrafik…", "Chargement des graphismes…", "Caricamento grafica…", "タワーのグラフィック読込中…", "타워 그래픽 불러오는 중…", "正在加载大厦图像…"], "Розставляємо меблі на поверхах…": ["Placing furniture on floors…", "Расставляем мебель…", "Stelle Möbel auf…", "Installation des meubles…", "Sistemiamo i mobili…", "家具を配置中…", "가구 배치 중…", "摆放家具中…"], "Перевіряємо ліфт…": ["Checking the elevator…", "Проверяем лифт…", "Prüfe den Aufzug…", "Vérification de l’ascenseur…", "Controllo ascensore…", "エレベーター点検中…", "엘리베이터 점검 중…", "检查电梯…"], "Запрошуємо перших гостей…": ["Inviting the first guests…", "Приглашаем первых гостей…", "Lade erste Gäste ein…", "On invite les premiers clients…", "Invitiamo i primi ospiti…", "最初の客を招待中…", "첫 손님 초대 중…", "邀请首批客人…"], "Готуємо скрині та нагороди…": ["Preparing chests and rewards…", "Готовим сундуки и награды…", "Bereite Truhen vor…", "Préparation des coffres…", "Prepariamo i forzieri…", "宝箱を準備中…", "상자와 보상 준비 중…", "准备宝箱和奖励…"], "Підключаємо паркінг…": ["Opening the parking…", "Подключаем паркинг…", "Öffne den Parkplatz…", "Ouverture du parking…", "Apriamo il parcheggio…", "駐車場を準備中…", "주차장 연결 중…", "开放停车场…"], "Полируємо кубки…": ["Polishing trophies…", "Полируем кубки…", "Poliere Pokale…", "On polit les coupes…", "Lucidiamo le coppe…", "トロフィーを磨き中…", "트로피 닦는 중…", "擦亮奖杯…"], "Майже готово!": ["Almost ready!", "Почти готово!", "Fast fertig!", "Presque prêt !", "Quasi pronto!", "もうすぐ！", "거의 다 됐어요!", "快好了！"], "Завантаження…": ["Loading…", "Загрузка…", "Laden…", "Chargement…", "Caricamento…", "読み込み中…", "로딩 중…", "加载中…"]});
 Object.assign(I18N, {"Нова гра": ["New game", "Новая игра", "Neues Spiel", "Nouvelle partie", "Nuova partita", "新規", "새 게임", "新游戏"], "Увійти": ["Log in", "Войти", "Anmelden", "Connexion", "Accedi", "ログイン", "로그인", "登录"], "Створи свій ігровий профіль": ["Create your game profile", "Создай игровой профиль", "Erstelle dein Profil", "Crée ton profil", "Crea il tuo profilo", "プロフィールを作成", "게임 프로필 만들기", "创建游戏档案"], "Вхід у свій профіль": ["Log in to your profile", "Вход в профиль", "Bei deinem Profil anmelden", "Connexion au profil", "Accedi al profilo", "プロフィールにログイン", "프로필 로그인", "登录你的档案"], "Нікнейм": ["Nickname", "Никнейм", "Nickname", "Pseudo", "Nickname", "ニックネーム", "닉네임", "昵称"], "Пароль": ["Password", "Пароль", "Passwort", "Mot de passe", "Password", "パスワード", "비밀번호", "密码"], "Почати грати": ["Start playing", "Начать играть", "Spielen", "Jouer", "Gioca", "プレイ開始", "게임 시작", "开始游戏"], "Щонайменше 6 символів": ["At least 6 characters", "Минимум 6 символов", "Mindestens 6 Zeichen", "Au moins 6 caractères", "Almeno 6 caratteri", "6文字以上", "6자 이상", "至少6个字符"], "Наприклад: Магнат_UA": ["E.g. Magnate_UA", "Например: Магнат_UA", "z. B. Magnat_UA", "Ex. : Magnat_UA", "Es.: Magnate_UA", "例: Magnate_UA", "예: Magnate_UA", "例如：Magnate_UA"], "Прогрес зберігається на сервері — грай з будь-якого пристрою.": ["Progress is saved on the server — play on any device.", "Прогресс хранится на сервере — играй с любого устройства.", "Fortschritt wird auf dem Server gespeichert.", "Progression sauvegardée sur le serveur.", "Progressi salvati sul server.", "進行状況はサーバーに保存されます。", "진행 상황은 서버에 저장됩니다.", "进度保存在服务器上。"], "Увійди тим самим нікнеймом і паролем, щоб продовжити гру.": ["Log in with the same nickname and password to continue.", "Войди тем же ником и паролем.", "Melde dich mit demselben Namen und Passwort an.", "Connecte-toi avec le même pseudo.", "Accedi con lo stesso nickname.", "同じニックネームでログイン。", "같은 닉네임으로 로그인하세요.", "用相同昵称和密码登录。"], "Підключення до сервера…": ["Connecting to server…", "Подключение к серверу…", "Verbinde mit Server…", "Connexion au serveur…", "Connessione al server…", "サーバーに接続中…", "서버 연결 중…", "正在连接服务器…"], "Офлайн-режим": ["Offline mode", "Офлайн-режим", "Offline-Modus", "Mode hors ligne", "Modalità offline", "オフラインモード", "오프라인 모드", "离线模式"], "Акаунт": ["Account", "Аккаунт", "Konto", "Compte", "Account", "アカウント", "계정", "账号"], "Вийти з акаунта": ["Log out", "Выйти из аккаунта", "Abmelden", "Se déconnecter", "Esci", "ログアウト", "로그아웃", "退出账号"], "Вийти з акаунта?": ["Log out?", "Выйти из аккаунта?", "Abmelden?", "Se déconnecter ?", "Uscire?", "ログアウトしますか？", "로그아웃할까요?", "退出账号？"], "Вийти": ["Log out", "Выйти", "Abmelden", "Quitter", "Esci", "ログアウト", "로그아웃", "退出"], "Увійти / створити профіль": ["Log in / create profile", "Войти / создать профиль", "Anmelden / Profil erstellen", "Connexion / créer", "Accedi / crea", "ログイン / 作成", "로그인 / 만들기", "登录 / 创建"], "Гість (офлайн)": ["Guest (offline)", "Гость (офлайн)", "Gast (offline)", "Invité (hors ligne)", "Ospite (offline)", "ゲスト（オフライン）", "게스트 (오프라인)", "访客（离线）"], "Чат": ["Chat", "Чат", "Chat", "Chat", "Chat", "チャット", "채팅", "聊天"], "Теми": ["Topics", "Темы", "Themen", "Sujets", "Discussioni", "トピック", "주제", "话题"], "Рейтинг": ["Ranking", "Рейтинг", "Rangliste", "Classement", "Classifica", "ランキング", "랭킹", "排行榜"], "Поверхи": ["Floors", "Этажи", "Etagen", "Étages", "Piani", "階", "층", "楼层"], "Нова тема": ["New topic", "Новая тема", "Neues Thema", "Nouveau sujet", "Nuova discussione", "新しいトピック", "새 주제", "新话题"], "Усі теми": ["All topics", "Все темы", "Alle Themen", "Tous les sujets", "Tutte", "すべて", "모든 주제", "所有话题"], "Повідомлення…": ["Message…", "Сообщение…", "Nachricht…", "Message…", "Messaggio…", "メッセージ…", "메시지…", "消息…"], "Відповідь…": ["Reply…", "Ответ…", "Antwort…", "Réponse…", "Risposta…", "返信…", "답장…", "回复…"], "Спільнота гравців": ["Player community", "Сообщество игроков", "Spieler-Community", "Communauté", "Community", "プレイヤーコミュニティ", "플레이어 커뮤니티", "玩家社区"], "Потрібне з’єднання": ["Connection required", "Нужно подключение", "Verbindung nötig", "Connexion requise", "Connessione necessaria", "接続が必要", "연결 필요", "需要连接"], "Прогрес оновлено з іншого пристрою": ["Progress updated from another device", "Прогресс обновлён с другого устройства", "Fortschritt von anderem Gerät", "Progression mise à jour", "Progressi aggiornati", "別端末から更新", "다른 기기에서 업데이트됨", "已从其他设备更新"], "Нікнейм змінено": ["Nickname changed", "Никнейм изменён", "Name geändert", "Pseudo modifié", "Nickname cambiato", "ニックネーム変更", "닉네임 변경됨", "昵称已更改"], "Цей нікнейм уже зайнятий": ["This nickname is taken", "Ник занят", "Name vergeben", "Pseudo déjà pris", "Nickname occupato", "使用済みのニックネーム", "이미 사용 중인 닉네임", "昵称已被占用"], "Невірний нікнейм або пароль": ["Wrong nickname or password", "Неверный ник или пароль", "Falscher Name oder Passwort", "Identifiants incorrects", "Credenziali errate", "ニックネームかパスワードが違います", "닉네임 또는 비밀번호 오류", "昵称或密码错误"], "Пароль — щонайменше 6 символів": ["Password — at least 6 characters", "Пароль — минимум 6 символов", "Passwort — mind. 6 Zeichen", "Mot de passe — 6 caractères min.", "Password — min 6 caratteri", "パスワードは6文字以上", "비밀번호 6자 이상", "密码至少6个字符"], "Нікнейм — від 3 до 20 символів": ["Nickname — 3 to 20 characters", "Ник — от 3 до 20 символов", "Name — 3 bis 20 Zeichen", "Pseudo — 3 à 20 caractères", "Nickname — 3-20 caratteri", "ニックネームは3〜20文字", "닉네임 3~20자", "昵称3-20个字符"], "Немає з’єднання з сервером": ["No connection to server", "Нет связи с сервером", "Keine Serververbindung", "Pas de connexion", "Nessuna connessione", "サーバーに接続できません", "서버 연결 없음", "无法连接服务器"]});
 Object.assign(I18N, {"Повноекранний режим": ["Fullscreen", "Полноэкранный режим", "Vollbild", "Plein écran", "Schermo intero", "全画面", "전체 화면", "全屏"], "Гра відкрита на іншому пристрої": ["The game is open on another device", "Игра открыта на другом устройстве", "Spiel auf anderem Gerät geöffnet", "Jeu ouvert sur un autre appareil", "Gioco aperto su un altro dispositivo", "別の端末でプレイ中", "다른 기기에서 실행 중", "游戏已在其他设备上打开"], "Щоб нічого не втратити, грати можна лише на одному пристрої одночасно. Твій прогрес збережено.": ["To keep your progress safe, you can play on one device at a time. Your progress is saved.", "Чтобы ничего не потерять, играть можно на одном устройстве. Прогресс сохранён.", "Spiele immer nur auf einem Gerät. Fortschritt gespeichert.", "Un seul appareil à la fois. Progression sauvegardée.", "Un dispositivo alla volta. Progressi salvati.", "同時に1台のみ。進行は保存済み。", "한 번에 한 기기에서만. 진행 상황 저장됨.", "每次只能在一台设备上玩。进度已保存。"], "Грати тут": ["Play here", "Играть здесь", "Hier spielen", "Jouer ici", "Gioca qui", "ここでプレイ", "여기서 플레이", "在这里玩"]});
-let LANG = 'uk', _trRe = null, _trMap = null, _trCache = new Map();
+let LANG = 'uk', _trOn = false, _trMap = null, _trCache = new Map();
 
 // ---- повний переклад v1.3 ----
 Object.assign(I18N, {
@@ -994,37 +994,110 @@ Object.assign(I18N, {
   "Телефон може «присипляти» гру у фоні — тоді сповіщення приходять із запізненням.": ["Your phone may put the game to sleep in the background — notifications may then arrive late.", "Телефон может «усыплять» игру в фоне — тогда уведомления приходят с опозданием.", "Dein Handy kann das Spiel im Hintergrund schlafen legen — dann kommen Benachrichtigungen verspätet.", "Ton téléphone peut mettre le jeu en veille en arrière-plan — les notifications arrivent alors en retard.", "Il telefono può sospendere il gioco in background — le notifiche possono arrivare in ritardo.", "スマホがバックグラウンドでゲームを休止させると、通知が遅れることがあります。", "휴대폰이 백그라운드에서 게임을 잠재우면 알림이 늦게 올 수 있어요.", "手机可能会在后台让游戏休眠——通知可能会延迟。"],
   "Дозволити роботу у фоні": ["Allow background activity", "Разрешить работу в фоне", "Hintergrundaktivität erlauben", "Autoriser l’activité en arrière-plan", "Consenti attività in background", "バックグラウンド動作を許可", "백그라운드 실행 허용", "允许后台运行"],
 });
+// ===================================================================
+//  Рушій перекладу. Раніше з усіх 2000+ фраз збирався один велетенський
+//  регулярний вираз — компіляція тривала пів секунди, а кожна заміна ~70 мс,
+//  тому перемикання мови «вішало» гру на десятки секунд.
+//  Тепер фрази складаються в префіксне дерево (trie) і рядок проходиться
+//  один раз: найдовший збіг у найлівішій позиції, як і раніше, але в сотні разів швидше.
+// ===================================================================
+let _trTrie = null;                       // префіксне дерево фраз поточної мови
+const _letRe = /[\p{L}'’]/u, _letMemo = new Map();
+const _isLet = c => { if (c === undefined) return false; let v = _letMemo.get(c); if (v === undefined) { v = _letRe.test(c); _letMemo.set(c, v); } return v; };
+const TR_END = '\u0000';                  // службовий ключ «тут закінчується фраза» (у текстах не трапляється)
+
 function setLang(id) {
-  LANG = LANG_IDX[id] !== undefined ? id : 'uk'; _trCache = new Map();
-  if (LANG === 'uk') { _trRe = null; return; }
+  LANG = LANG_IDX[id] !== undefined ? id : 'uk';
+  _trCache = new Map(); _trTrie = null; _trMap = null; _trOn = false;
+  if (LANG === 'uk') return;
   const k = LANG_IDX[LANG];
-  _trMap = new Map(Object.entries(I18N).map(([u, a]) => [u.replace(/\\'/g, "'"), a[k]]));
-  const L = /\p{L}/u, esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const keys = [..._trMap.keys()].sort((a, b) => b.length - a.length)
-    .map(k => (L.test(k[0]) ? "(?<![\\p{L}'’])" : '') + esc(k) + (L.test(k[k.length - 1]) ? "(?![\\p{L}'’])" : ''));
-  _trRe = new RegExp(`(?:${keys.join('|')})`, 'gu');
+  _trMap = new Map();
+  for (const u in I18N) { const t = I18N[u][k]; if (t) _trMap.set(u.replace(/\\'/g, "'"), t); }
+  _trOn = true;                           // дерево збираємо ліниво — при першому перекладі
+}
+// збірка дерева: ~35 тис. символів, кілька мілісекунд, один раз на мову
+function _trBuild() {
+  const root = new Map();
+  for (const [key, val] of _trMap) {
+    if (!key) continue;
+    let n = root;
+    for (let i = 0; i < key.length; i++) { const c = key[i]; let x = n.get(c); if (!x) { x = new Map(); n.set(c, x); } n = x; }
+    n.set(TR_END, val);
+  }
+  _trTrie = root;
+}
+// заміна всіх фраз у рядку за один прохід
+function _trSub(s) {
+  if (!_trTrie) _trBuild();
+  const n = s.length; let out = '', i = 0, plain = 0;
+  while (i < n) {
+    const c = s[i], first = _trTrie.get(c);
+    if (first === undefined) { i++; plain++; continue; }
+    // межа зліва: фразу, що починається з літери, не чіпаємо всередині слова
+    if (i > 0 && _isLet(c) && _isLet(s[i - 1])) { i++; plain++; continue; }
+    let node = first, j = i, best = -1, bestVal = null;
+    for (;;) {
+      const v = node.get(TR_END);
+      if (v !== undefined && !(_isLet(s[j]) && _isLet(s[j + 1]))) { best = j; bestVal = v; }  // межа справа
+      if (++j >= n) break;
+      const nx = node.get(s[j]); if (nx === undefined) break;
+      node = nx;
+    }
+    if (best < 0) { i++; plain++; continue; }
+    if (plain) { out += s.slice(i - plain, i); plain = 0; }
+    out += bestVal; i = best + 1;
+  }
+  if (plain) out += s.slice(n - plain);
+  return out;
 }
 function tr(str) {
-  if (!_trRe || !str || !/[А-Яа-яІіЇїЄєҐґ']/.test(str)) return str;
+  if (!_trOn || !str) return str;
+  const direct = _trMap.get(str); if (direct !== undefined) return direct;   // найчастіший випадок — рядок і є фразою зі словника
+  if (!/[А-Яа-яІіЇїЄєҐґ']/.test(str)) return str;
   let r = _trCache.get(str); if (r !== undefined) return r;
-  r = str.replace(_trRe, m => _trMap.get(m) ?? m);
-  if (_trCache.size > 5000) _trCache.clear();
+  r = _trSub(str);
+  if (_trCache.size > 20000) _trCache.clear();
   _trCache.set(str, r); return r;
 }
-// тексти гравців (чат, особисті, ніки) не чіпаємо словником — їх перекладає машинний переклад
+
+// ---- переклад сторінки ----
+// Для кожного зміненого текстового вузла пам'ятаємо [оригінал, що саме ми туди записали].
+// Це дає дві речі: гра може сама змінити текст (лічильники) — ми це побачимо й не затремо,
+// і при поверненні на українську всі вузли відновлюються без перезавантаження сторінки.
+const _trOrig = new WeakMap();
 const _noTr = n => { const p = n.nodeType === 3 ? n.parentElement : n; return !!(p && p.closest && p.closest('.notr, .tn-nick, [contenteditable]')); };
-function trNode(root) {
-  if (!_trRe || _noTr(root)) return;
-  if (root.nodeType === 3) { const t = tr(root.nodeValue); if (t !== root.nodeValue) root.nodeValue = t; return; }
+function _trText(n) {
+  const cur = n.nodeValue, rec = _trOrig.get(n);
+  const src = (rec && rec[1] === cur) ? rec[0] : cur;          // наш переклад на місці → беремо оригінал, інакше текст змінила гра
+  const t = tr(src);
+  if (t !== src) { _trOrig.set(n, [src, t]); if (cur !== t) n.nodeValue = t; }
+  else { if (rec) _trOrig.delete(n); if (cur !== t) n.nodeValue = t; }
+}
+function _trWalk(root, fn) {
+  if (root.nodeType === 3) { if (!_noTr(root)) fn(root); return; }
   if (root.nodeType !== 1 || root.tagName === 'SCRIPT' || root.tagName === 'STYLE' || root.tagName === 'INPUT') return;
-  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest('.notr, .tn-nick') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }); let n;
-  while ((n = w.nextNode())) { const t = tr(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t; }
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT,
+    { acceptNode: n => n.parentElement && n.parentElement.closest('.notr, .tn-nick') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  let n; while ((n = w.nextNode())) fn(n);
+}
+function trNode(root) { if (!_trOn || _noTr(root)) return; _trWalk(root, _trText); }
+// повертаємо сторінці українські тексти (перехід на іншу мову або назад на українську)
+function untrNode(root) {
+  _trWalk(root, n => { const rec = _trOrig.get(n); if (rec && rec[1] === n.nodeValue) { n.nodeValue = rec[0]; _trOrig.delete(n); } });
 }
 let _trObs = null;
+function stopI18n() { if (_trObs) { _trObs.disconnect(); _trObs = null; } }
 function startI18n() {
-  if (_trObs) _trObs.disconnect();
-  if (!_trRe) return;
+  stopI18n();
+  if (!_trOn) return;
   trNode(document.body);
   _trObs = new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') trNode(m.target); else m.addedNodes.forEach(trNode); } });
   _trObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+}
+// Перемикання мови без перезавантаження: знімаємо спостерігач, повертаємо оригінали, вмикаємо нову мову.
+function applyLang(id) {
+  stopI18n();
+  untrNode(document.body);
+  setLang(id);
+  startI18n();
 }

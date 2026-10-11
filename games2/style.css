@@ -1127,6 +1127,15 @@ button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 .chip.hh:not(.on) { animation: badgepop 2.2s infinite; }
 .chip.hh.on { background: linear-gradient(90deg, rgba(255,170,0,.85), rgba(200,90,0,.85)); color: #fff; }
 .hhbig { width: 90px; height: 90px; object-fit: contain; margin-bottom: 6px; }
+.chip.hh.wait { border-color: rgba(255,197,49,.35); color: #b9c6e6; opacity: .78; animation: none; }
+.hhgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 12px; }
+.hhgrid > div { background: rgba(10,20,48,.5); border: 1px solid rgba(255,197,49,.25); border-radius: 14px; padding: 10px 4px; text-align: center; }
+.hhgrid img { width: 34px; height: 34px; object-fit: contain; display: block; margin: 0 auto 4px; }
+.hhgrid b { display: block; color: #ffd978; font-size: 17px; line-height: 1.1; }
+.hhgrid small { display: block; color: #9fb0d8; font-size: 11px; margin-top: 2px; }
+.hhnow { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; border-radius: 14px; font-size: 15px; color: #fff;
+  background: linear-gradient(90deg, rgba(255,170,0,.85), rgba(200,90,0,.85)); box-shadow: 0 4px 14px rgba(255,150,0,.25); }
+.hhnow img { width: 26px; height: 26px; object-fit: contain; }
 .milcar { position: absolute; left: 44%; bottom: 33px; width: 70px; z-index: 5; cursor: pointer; transition: transform 1.2s ease-in, opacity 1.2s; }
 .milcar > img { width: 100%; filter: drop-shadow(0 3px 2px rgba(0,0,0,.6)); }
 .milcar.leave { transform: translateX(320px); opacity: 0; }

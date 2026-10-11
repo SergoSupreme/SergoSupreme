@@ -344,11 +344,12 @@ const EMPIRE_COSTS = [[500,'c'],[1000,'c'],[2000,'c'],[4000,'c'],[50,'b'],[5000,
   [1000,'b'],[500000,'c'],[600000,'c'],[700000,'c'],[2000,'b'],[700000,'c'],[800000,'c'],[900000,'c'],[5000,'b'],[1e6,'c'],
   [2e6,'c'],[3e6,'c'],[8000,'b'],[1e7,'c'],[2e7,'c'],[3e7,'c'],[10000,'b'],[1e8,'c'],[2e8,'c'],[5e9,'c']];
 
+// xp — базовий досвід скрині (множиться на рівень гравця в openChest). Знижено приблизно в 7 разів: скрині давали забагато досвіду
 const CHESTS = [
-  { id: 'wood',   name: "Дерев'яна",  icon: 'chest_wood',   price: 500, cur: 'coins', coins: [300, 900],    bucks: [0, 5],    xp: [20, 60],     bonus: 0.25, pcts: [100] },
-  { id: 'blue',   name: 'Синя',       icon: 'chest_blue',   price: 60,  cur: 'bucks', coins: [800, 2500],   bucks: [5, 25],   xp: [60, 200],    bonus: 0.5,  pcts: [100, 200] },
-  { id: 'purple', name: 'Фіолетова',  icon: 'chest_purple', price: 180, cur: 'bucks', coins: [3000, 7000],  bucks: [20, 70],  xp: [200, 600],   bonus: 0.8,  pcts: [100, 200, 300], resident: 0.3 },
-  { id: 'red',    name: 'Легендарна', icon: 'chest_red',    price: 450, cur: 'bucks', coins: [9000, 20000], bucks: [60, 160], xp: [600, 1800],  bonus: 1,    pcts: [200, 300], resident: 1 },
+  { id: 'wood',   name: "Дерев'яна",  icon: 'chest_wood',   price: 500, cur: 'coins', coins: [300, 900],    bucks: [0, 5],    xp: [3, 9],     bonus: 0.25, pcts: [100] },
+  { id: 'blue',   name: 'Синя',       icon: 'chest_blue',   price: 60,  cur: 'bucks', coins: [800, 2500],   bucks: [5, 25],   xp: [9, 30],    bonus: 0.5,  pcts: [100, 200] },
+  { id: 'purple', name: 'Фіолетова',  icon: 'chest_purple', price: 180, cur: 'bucks', coins: [3000, 7000],  bucks: [20, 70],  xp: [30, 85],   bonus: 0.8,  pcts: [100, 200, 300], resident: 0.3 },
+  { id: 'red',    name: 'Легендарна', icon: 'chest_red',    price: 450, cur: 'bucks', coins: [9000, 20000], bucks: [60, 160], xp: [85, 260],  bonus: 1,    pcts: [200, 300], resident: 1 },
 ];
 // Бонуси зі скринь: піар / маркетинг / менеджер на 1–24 год
 const CHEST_BONUS = { svcs: ['pr', 'marketing', 'manager'], hours: [1, 1, 2, 3, 3, 5, 7, 7, 12, 24] };
@@ -591,8 +592,8 @@ const HELI = {
 };
 // Мільйонер на дорозі: зупиняється біля вежі, якщо швидко забрати — банкноти
 const ROAD_EVENT = { every: [240, 480], wait: 25, bucks: [5, 15] };
-// Щаслива година: 15 хв на день, продажі й доставка вдвічі швидші
-const HAPPY_HOUR = { minutes: 15, speed: 2 };
+// Щаслива година: ціла година раз на добу (24 год від минулого запуску), продажі й доставка вдвічі швидші
+const HAPPY_HOUR = { minutes: 60, speed: 2, cooldown: 24 * 3600 };
 // Сезонний пропуск: 30 рівнів, 100 очок сезону на рівень
 const PASS = { levels: 100, sp: 100, premium: 3000,
   src: { daily: 20, vip: 30, coll: 15, maze: 40, lotto: 5, heli: 50, mil: 10, rides5: 1 } };

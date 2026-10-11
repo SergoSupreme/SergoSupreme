@@ -107,6 +107,10 @@ const incomeMult = () => (1 + svcPct('marketing') / 100) * (1 + cupBonus()) * (1
 const curWeather = () => WEATHER.find(w => w.id === (S.weather && S.weather.id)) || WEATHER[0];
 const WB = () => curWeather().bonus || {};
 const hhOn = () => !!S.hh && S.hh.until > now();
+// Щаслива година доступна раз на добу: 24 години від попереднього запуску
+const hhLast = () => (S.hh && (S.hh.last || (S.hh.until ? S.hh.until - HAPPY_HOUR.minutes * 60 : 0))) || 0;
+const hhLeft = () => Math.max(0, hhLast() + HAPPY_HOUR.cooldown - now());
+const hhReady = () => !hhOn() && hhLeft() <= 0;
 const xpMult = () => (1 + svcPct('pr') / 100) * (1 + cupBonus()) * (1 + (WB().xp || 0) / 100) * (1 + 0.03 * corpLvl('xp'));
 const empMult = (cat, kind) => 1 + EMPIRE.filter(e => e.cat === cat && e.kind === kind).reduce((a, e) => a + emp(e.id) * EMPIRE_STEP, 0);
 const builtIds = () => new Set(S.floors.filter(f => f.type === 'biz').map(f => f.biz));
@@ -1136,7 +1140,8 @@ function render() {
   const W = WEATHER.find(w => w.id === (S.weather && S.weather.id)) || WEATHER[0];
   let chips = `<div class="chip wchip"><img src="${IMG(W.icon)}">${W.name}${W.btxt ? `<em>${W.btxt}</em>` : ''}</div>`;
   if (hhOn()) chips += `<div class="chip hh on" data-hh="1"><img src="${IMG('stopwatch')}">×2 · ${fmtT(S.hh.until - now())}</div>`;
-  else if (S.hh.date !== dayKey(now())) chips += `<div class="chip hh" data-hh="1"><img src="${IMG('stopwatch')}">Щаслива година</div>`;
+  else if (hhReady()) chips += `<div class="chip hh" data-hh="1"><img src="${IMG('stopwatch')}">Щаслива година</div>`;
+  else chips += `<div class="chip hh wait" data-hh="1"><img src="${IMG('stopwatch')}">Через ${fmtT(hhLeft())}</div>`;
   for (const ty of ['discount', 'donate']) { const L = activePromos(ty); if (!L.length) continue; const best = L.reduce((a, p) => +p.pct > +a.pct ? p : a), end = Math.min(...L.map(p => p.end));
     chips += `<div class="chip promo ${ty}" data-promo="${ty}" style="--pc:${best.color || (ty === 'donate' ? '#1f9a37' : '#e0303c')}"><img src="${IMG(best.icon || 'fireworks')}">${ty === 'donate' ? '+' : '−'}${best.pct}%${L.length > 1 ? ' +' + (L.length - 1) : ''} · ${fmtT(end - now())}</div>`; }
   const bon = [];
@@ -2096,7 +2101,8 @@ function applySettings() {
   const st = S.settings, app = $('#app');
   app.classList.toggle('noanim', st.anim === false);
   app.classList.remove('q-low', 'q-mid', 'q-high'); app.classList.add('q-' + (st.quality || 'high')); document.body.classList.toggle('q-low', (st.quality || 'high') === 'low');
-  if (LANG !== (st.lang || 'uk')) { setLang(st.lang || 'uk'); if (LANG === 'uk') location.reload(); else startI18n(); if (typeof mtApply === 'function') mtApply(); }
+  // Зміна мови — миттєво й без перезавантаження: оригінали текстів запам'ятовані, тож повернення на українську теж миттєве
+  if (LANG !== (st.lang || 'uk')) { applyLang(st.lang || 'uk'); if (typeof mtApply === 'function') mtApply(); }
   document.title = tr(GAME_TITLE);
 }
 // ---------- спокійна фонова музика (лаунж-петля ~1,5 хв) ----------
@@ -2290,11 +2296,25 @@ function trafficLoop(t) {
 }
 // ---------- Щаслива година ----------
 function askHappyHour() {
-  if (S.hh.date === dayKey(now())) { toast('Щаслива година вже була сьогодні', 'stopwatch'); return; }
-  openModal({ icon: 'stopwatch', title: 'Щаслива година', sub: `${HAPPY_HOUR.minutes} хв раз на день`, color: '#c9921c' }, () =>
-    `<div class="askbox"><img class="hhbig" src="${IMG('stopwatch')}" alt=""><p>Протягом <b>${HAPPY_HOUR.minutes} хвилин</b> усі доставки й продажі, які ти почнеш, будуть <b>удвічі швидшими</b>. Активувати можна раз на день — обери вдалий момент!</p></div>
-     <button class="btn gold wide shine" data-a="go">Активувати зараз</button>`,
-  { go: () => { S.hh = { date: dayKey(now()), until: now() + HAPPY_HOUR.minutes * 60 }; sfx('level'); confetti(30); closeModal(); toast('Щаслива година! Усе вдвічі швидше', 'stopwatch'); save(); render(); } });
+  openModal({ icon: 'stopwatch', title: 'Щаслива година', sub: 'Ціла година раз на добу', color: '#c9921c' }, () => {
+    const left = hhLeft(), on = hhOn();
+    return `<div class="askbox hhask"><img class="hhbig" src="${IMG('stopwatch')}" alt="">
+      <p>Протягом <b>цілої години</b> усі доставки й продажі, які ти почнеш, будуть <b>удвічі швидшими</b>. Запускати можна раз на добу — обери вдалий момент!</p></div>
+     <div class="hhgrid">
+       <div><img src="${IMG('stopwatch')}" alt=""><b>60 хв</b><small>тривалість</small></div>
+       <div><img src="${IMG('handtruck')}" alt=""><b>×2</b><small>доставка</small></div>
+       <div><img src="${IMG('cash_big')}" alt=""><b>×2</b><small>продаж</small></div>
+     </div>
+     ${on ? `<div class="hhnow"><img src="${IMG('fireworks')}" alt="">Щаслива година вже триває · <b>${fmtT(S.hh.until - now())}</b></div>`
+          : left > 0 ? `<div class="note small">Наступна щаслива година буде доступна через <b>${fmtT(left)}</b>.</div><button class="btn gray wide" disabled>Через ${fmtT(left)}</button>`
+          : '<button class="btn gold wide shine" data-a="go">Активувати зараз</button>'}`;
+  },
+  { go: () => {
+      if (!hhReady()) return;
+      const t = now();
+      S.hh = { date: dayKey(t), last: t, until: t + HAPPY_HOUR.minutes * 60 };
+      sfx('level'); confetti(30); closeModal(); toast('Щаслива година! Цілу годину все вдвічі швидше', 'stopwatch'); save(); render();
+    } });
 }
 // ---------- Паркінг (техніка під вежею) ----------
 function renderParking() {
@@ -2592,7 +2612,7 @@ function init() {
   $('#nav-quest').onclick = () => openQuests();
   $('#nav-menu').onclick = openMenu;
   $('#side-left').addEventListener('click', e => { const c = e.target.closest('[data-promo]'); if (c) { e.stopPropagation(); c.dataset.promo === 'donate' ? openDonate() : openNews(); } }, true);
-  $('#side-left').onclick = e => { if (e.target.closest('[data-hh]')) { if (!hhOn()) askHappyHour(); return; } if (e.target.closest('[data-tg]')) { chipsOpen = !chipsOpen; sfx('click'); render(); } };
+  $('#side-left').onclick = e => { if (e.target.closest('[data-hh]')) { askHappyHour(); return; } if (e.target.closest('[data-tg]')) { chipsOpen = !chipsOpen; sfx('click'); render(); } };
   $('#rn-daily').onclick = () => openQuests();
   $('#rn-chests').onclick = openChests;
 
