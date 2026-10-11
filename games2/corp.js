@@ -385,6 +385,8 @@ const invDayName = n => ['', 'понеділок', 'вівторок', 'сере
 const invDaysTxt = () => INVEST.days.map(d => tr(invDayName(d))).join(', ');
 const invRevNeed = (m, lvl) => Math.round(m.rev * (1 + 0.25 * Math.max(0, lvl - 1)));
 const invMyRev = () => (typeof revHourRate === 'function' ? revHourRate() : 0);
+// уся тривалість переговорів: 5 хв / 3 хв / 1 хв 40 с
+const invDur = m => { const t = m.rounds * m.sec, mm = Math.floor(t / 60), ss = t % 60; return mm + ' ' + tr('хв') + (ss ? ' ' + ss + ' ' + tr('с') : ''); };
 const invCool = () => Math.max(0, INV.coolEnd - Date.now() / 1000);
 
 // ---------- запити ----------
@@ -493,7 +495,8 @@ function invIdleHTML(I, C, my) {
   h += `<div class="pst inv-pst">${tr('Режими й нагороди')}</div><div class="inv-modes">` + INVEST.modes.map(m => {
     const sel = INV.pick === m.id;
     return `<div class="invm ${sel ? 'on' : ''} ${can ? 'pick' : ''}" style="--mc:${m.color}" ${can ? `data-a="invmode" data-v="${m.id}"` : ''}>
-      <div class="invm-h"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr(m.name)}</b><small>${m.rounds} ${tr('питань')} · ${m.sec} ${tr('с на відповідь')}</small></div>${sel && can ? '<i class="invm-ok">✓</i>' : ''}</div>
+      <div class="invm-h"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr(m.name)}</b>
+        <small><b class="invm-dur">${invDur(m)}</b> · ${m.rounds} ${tr('питань')} ${tr('по')} ${m.sec} ${tr('с')}</small></div>${sel && can ? '<i class="invm-ok">✓</i>' : ''}</div>
       <div class="invm-rw"><div><small>${tr('Корпорації')}</small><span><img src="${IMG(BUCK)}">${fmt(m.corp.bucks)}</span><span><img src="${IMG(COIN)}">${fmt(m.corp.per * C.lvl)}</span><span><img src="${IMG('star3')}">${fmt(m.corp.per * C.lvl)}</span></div>
         <div><small>${tr('Учаснику')}</small><span><img src="${IMG(BUCK)}">${m.me}</span></div></div>
       <div class="invm-rev"><img src="${CSRC('ic_4')}" alt="">${tr('Виручка/год для повного бонусу')}: <b>${fmt(invRevNeed(m, C.lvl))}</b></div></div>`;
@@ -527,7 +530,7 @@ function invLobbyHTML(st, C) {
   const m = invMode(st.mode), mine = st.me || {}, myRev = invMyRev();
   const bonus = Math.min(1, myRev / Math.max(1, invRevNeed(m, st.lvl)));
   let h = `<div class="inv-live lobby" style="--mc:${m.color}">
-    <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Інвестори вже в дорозі')}</b><small>${tr(m.name)} · ${st.rounds} ${tr('питань')}</small></div></div>
+    <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Інвестори вже в дорозі')}</b><small>${tr(m.name)} · ${invDur(m)} · ${st.rounds} ${tr('питань')}</small></div></div>
     <div class="ivl-clock"><span>${tr('Початок через')}</span><b data-end="${st.begin}">${fmtT(Math.max(0, st.begin - Date.now() / 1000))}</b></div>
     <div class="cb-bar big ivl-lobby"><i style="width:0%"></i></div></div>`;
   if (mine.in) {
@@ -584,7 +587,7 @@ const invActions = {
   invgo: () => {
     const m = invMode(INV.pick);
     confirmBox({ icon: 'bz_office', title: tr('Почати переговори?'), cls: 'green', yes: tr('Запросити інвесторів'), back: () => openCorp('inv'),
-      text: `<b>${tr(m.name)}</b><br>${m.rounds} ${tr('питань')} · ${m.sec} ${tr('с на відповідь')}<br><br>${tr('Усім учасникам прийде сповіщення. На збір — 5 хвилин. Наступні переговори — тільки через 24 години.')}` },
+      text: `<b>${tr(m.name)}</b> · ${invDur(m)}<br>${m.rounds} ${tr('питань')} ${tr('по')} ${m.sec} ${tr('с')}<br><br>${tr('Усім учасникам прийде сповіщення. На збір — 5 хвилин. Наступні переговори — тільки через 24 години.')}` },
       async () => {
         const r = await api('corp_inv_start', { mode: INV.pick });
         if (!r.ok) return toast(cErr(r.error), 'bz_office', true);

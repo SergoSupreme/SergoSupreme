@@ -2128,6 +2128,7 @@ const qMul = () => ({ low: 0, mid: .5, high: 1 })[S.settings.quality || 'high'];
 function openMenu() {
   const st = S.settings;
   openModal({ icon: 'settings', title: 'Налаштування', sub: GAME_TITLE + ' · версія ' + VERSION, color: '#3a4a80' }, () => `
+    ${NET.auth ? `<div class="setsec"><div class="sett">Бонус-код і код запрошення</div>${codeBoxHTML()}</div>` : ''}
     <div class="setsec"><div class="sett">Звук</div>
       <div class="setrow"><img src="${IMG('bell')}"><span>Фонова музика</span><button class="switch ${st.music !== false ? 'on' : ''}" data-a="sound" aria-label="Фонова музика"></button></div>
       <div class="setrow vol"><img src="${IMG('megaphone2')}"><span>Гучність</span><input type="range" min="0" max="100" step="5" value="${st.vol ?? 80}" id="volr" aria-label="Гучність" style="--p:${st.vol ?? 80}%"><b id="volv">${st.vol ?? 80}%</b></div>
@@ -2144,7 +2145,6 @@ function openMenu() {
       <div class="setrow col"><span><img src="${IMG('star3')}">Якість</span><div class="seg3">${[['low', 'Низька'], ['mid', 'Середня'], ['high', 'Висока']].map(([k, n]) => `<button class="${(st.quality || 'high') === k ? 'on' : ''}" data-a="q" data-v="${k}">${n}</button>`).join('')}</div></div>
       <div class="setrow"><img src="${IMG('phone')}"><span>Повноекранний режим</span><button class="switch ${st.fullscreen !== false ? 'on' : ''}" data-a="fs" aria-label="Повноекранний режим"></button></div>
       <div class="setrow"><img src="${IMG('fireworks')}"><span>Анімації</span><button class="switch ${st.anim !== false ? 'on' : ''}" data-a="anim" aria-label="Анімації"></button></div></div>
-    ${NET.auth ? `<div class="setsec"><div class="sett">Бонус-код і код запрошення</div>${codeBoxHTML()}</div>` : ''}
     ${NET.auth ? `<div class="setsec"><div class="sett">Приватність</div>
       <div class="note small">Обери, хто може звертатися до тебе. Якщо вимкнути — відповідні кнопки зникнуть у твоєму профілі для інших гравців.</div>
       ${[['gift', 'Подарунки від гравців', 'gift_red'], ['dm', 'Особисті повідомлення', 'mail2'], ['corp', 'Запрошення в корпорації', 'bz_office']].map(([k, n, ic]) =>

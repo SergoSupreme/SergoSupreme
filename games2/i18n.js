@@ -1093,6 +1093,9 @@ Object.assign(I18N, {
   "Браузер не дозволив сповіщення": ["The browser didn’t allow notifications", "Браузер не разрешил уведомления", "Der Browser hat Benachrichtigungen nicht erlaubt", "Le navigateur n’a pas autorisé les notifications", "Il browser non ha consentito le notifiche", "ブラウザが通知を許可しませんでした", "브라우저가 알림을 허용하지 않았어요", "浏览器未允许通知"],
   "Питання вже змінилося": ["The question has already changed", "Вопрос уже сменился", "Die Frage hat bereits gewechselt", "La question a déjà changé", "La domanda è già cambiata", "質問はすでに切り替わりました", "질문이 이미 바뀌었어요", "题目已经切换"],
   "Ще рано": ["Too early", "Ещё рано", "Noch zu früh", "Trop tôt", "Troppo presto", "まだ早い", "아직 일러요", "还太早"],
+  "хв": ["min", "мин", "Min", "min", "min", "分", "분", "分钟"],
+  "с": ["s", "с", "s", "s", "s", "秒", "초", "秒"],
+  "по": ["of", "по", "à je", "de", "da", "×", "문항당", "每题"],
   "тобі": ["for you", "тебе", "für dich", "pour toi", "per te", "あなたに", "당신에게", "给你"],
   "Корпорація та інвестори": ["Corporation and investors", "Корпорация и инвесторы", "Konzern und Investoren", "Corporation et investisseurs", "Corporazione e investitori", "企業と投資家", "기업과 투자자", "公司与投资人"],
 });

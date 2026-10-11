@@ -2887,9 +2887,10 @@ img.ri, #toast span img.ri, .don-cf-bonus img.ri { display: inline-block; width:
 .inv-hero-art { position: relative; width: 74px; height: 74px; flex: none; }
 .inv-hero-art .ih-main { width: 74px; height: 74px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
 .inv-hero-art .ih-s { position: absolute; width: 30px; height: 30px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
-.inv-hero-art .ih-s.a { right: -8px; top: -4px; animation: ihFloat 3.4s ease-in-out infinite; }
-.inv-hero-art .ih-s.b { left: -10px; bottom: -2px; animation: ihFloat 3.4s ease-in-out infinite .9s; }
-@keyframes ihFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+/* alternate — рух іде вперед-назад, тож на стику циклу немає стрибка на початок */
+.inv-hero-art .ih-s.a { right: -8px; top: -4px; animation: ihFloat 2.8s ease-in-out infinite alternate; }
+.inv-hero-art .ih-s.b { left: -10px; bottom: -2px; animation: ihFloat 3.6s ease-in-out infinite alternate; animation-delay: -1.7s; }
+@keyframes ihFloat { from { transform: translateY(4px); } to { transform: translateY(-6px); } }
 .ih-txt b { display: block; font-family: var(--display); font-size: 17px; color: #ffe27a; }
 .ih-txt p { margin: 3px 0 0; font: 800 11.5px/1.35 var(--body); color: #cfe0ff; }
 
@@ -2910,6 +2911,7 @@ img.ri, #toast span img.ri, .don-cf-bonus img.ri { display: inline-block; width:
 .invm-h img { width: 44px; height: 44px; object-fit: contain; flex: none; }
 .invm-h b { display: block; font: 900 15px var(--body); color: #fff; }
 .invm-h small { display: block; font: 800 11px var(--body); color: #9fb2e8; }
+.invm-dur { color: #ffd978; }
 .invm-ok { font-style: normal; font: 900 16px var(--body); color: var(--mc); }
 .invm-rw { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 8px; }
 .invm-rw > div { background: rgba(0,0,0,.25); border-radius: 11px; padding: 6px 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
