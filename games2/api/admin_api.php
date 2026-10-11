@@ -232,6 +232,46 @@ switch ($a) {
                                        AND m.reward NOT LIKE '%corpinv%' ORDER BY m.id DESC LIMIT 30")->fetchAll()]);
   }
 
+  // ---------- бонус-коди ----------
+  case 'adm_codes': {
+    require_once __DIR__ . '/codes.php';
+    out(['ok' => true, 'items' => array_map('codeRow', q('SELECT * FROM bonus_codes ORDER BY active DESC, id DESC LIMIT 100')->fetchAll())]);
+  }
+  case 'adm_code_save': {
+    require_once __DIR__ . '/codes.php';
+    $id = (int)arg('id', 0);
+    $code = codeNorm((string)arg('code', ''));
+    if (!codeValid($code)) fail('code_chars');
+    $rw = cleanRewards(arg('rewards', [])); if (!$rw) fail('no_rewards');
+    $max = max(0, min(1000000, (int)arg('max', 0)));
+    $act = (int)arg('active', 1) ? 1 : 0;
+    $note = mb_substr(trim((string)arg('note', '')), 0, 120);
+    $exp = max(0, (int)arg('expires', 0));
+    // код не має збігатися з чужим бонус-кодом або з кодом запрошення гравця
+    if (q('SELECT 1 FROM bonus_codes WHERE code = ? AND id <> ?', [$code, $id])->fetchColumn()) fail('code_exists');
+    if (q('SELECT 1 FROM players WHERE invite_code = ?', [$code])->fetchColumn()) fail('code_exists');
+    if ($id) {
+      q('UPDATE bonus_codes SET code = ?, reward = ?, max_uses = ?, active = ?, note = ?, expires_at = ? WHERE id = ?',
+        [$code, json_encode($rw, JSON_UNESCAPED_UNICODE), $max, $act, $note ?: null, $exp, $id]);
+    } else {
+      q('INSERT INTO bonus_codes (code, reward, max_uses, active, note, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [$code, json_encode($rw, JSON_UNESCAPED_UNICODE), $max, $act, $note ?: null, $exp]);
+      $id = (int)db()->lastInsertId();
+    }
+    alog('code', $code, $rw);
+    out(['ok' => true, 'id' => $id]);
+  }
+  case 'adm_code_act': {
+    $id = (int)arg('id'); q('UPDATE bonus_codes SET active = ? WHERE id = ?', [(int)arg('v', 0) ? 1 : 0, $id]);
+    alog((int)arg('v', 0) ? 'code_on' : 'code_off', (string)q('SELECT code FROM bonus_codes WHERE id = ?', [$id])->fetchColumn());
+    out(['ok' => true]);
+  }
+  case 'adm_code_del': {
+    $id = (int)arg('id'); $c = (string)q('SELECT code FROM bonus_codes WHERE id = ?', [$id])->fetchColumn();
+    q('DELETE FROM bonus_codes WHERE id = ?', [$id]); alog('code_del', $c);
+    out(['ok' => true]);
+  }
+
   // ---------- акції ----------
   case 'adm_promos': {
     out(['ok' => true, 'items' => array_map(fn($r) => $r + ['rewards_list' => json_decode((string)$r['rewards'], true) ?: []],

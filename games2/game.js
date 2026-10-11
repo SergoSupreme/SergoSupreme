@@ -1815,10 +1815,13 @@ function openProfile(other, back) {
     h += '<div class="pchips">' + chips.map(([i, v, t]) => `<div><img src="${IMG(i)}" alt=""><b>${v}</b><span>${t}</span></div>`).join('') + '</div>';
     if (op) {
       const lock = op.blocked || op.blockedMe ? 'disabled' : '';
-      h += `<div class="psec pact">${op.blockedMe ? `<div class="note small">${tr('Гравець обмежив спілкування з тобою.')}</div>` : ''}
-        <button class="btn purple shine gift-b wide" data-a="gift" ${lock}><img src="${IMG('gift_red')}" alt="">${tr('Подарувати')}</button>
+      // гравець міг заборонити подарунки чи особисті в налаштуваннях — тоді кнопок просто немає
+      const okGift = op.okGift !== false, okDm = op.okDm !== false;
+      const shut = !okGift && !okDm ? tr('Гравець закрив подарунки й особисті повідомлення.') : !okGift ? tr('Гравець не приймає подарунки.') : !okDm ? tr('Гравець не приймає особисті повідомлення.') : '';
+      h += `<div class="psec pact">${op.blockedMe ? `<div class="note small">${tr('Гравець обмежив спілкування з тобою.')}</div>` : shut ? `<div class="note small">${shut}</div>` : ''}
+        ${okGift ? `<button class="btn purple shine gift-b wide" data-a="gift" ${lock}><img src="${IMG('gift_red')}" alt="">${tr('Подарувати')}</button>` : ''}
         ${corpCanInvite(op) ? `<button class="btn gold shine wide" data-a="cinv"><img src="${CSRC('ic_8')}" alt="">${tr('Запросити в корпорацію')}</button>` : ''}
-        <div class="pact-2"><button class="btn green shine" data-a="dm" ${lock}><img src="${IMG('mail2')}" alt="">${tr('Написати')}</button>
+        <div class="pact-2">${okDm ? `<button class="btn green shine" data-a="dm" ${lock}><img src="${IMG('mail2')}" alt="">${tr('Написати')}</button>` : ''}
         ${op.friend ? `<button class="btn gray" data-a="unfr"><img src="${IMG('friends')}" alt="">${tr('Видалити з друзів')}</button>` : `<button class="btn blue" data-a="fr" ${lock}><img src="${IMG('friends')}" alt="">${tr('Додати в друзі')}</button>`}</div>
         ${op.blocked ? `<button class="btn gold wide" data-a="unbl">${tr('Розблокувати')}</button>` : `<button class="btn red wide" data-a="bl">${tr('Заблокувати')}</button>`}</div>`;
     }
@@ -2141,6 +2144,12 @@ function openMenu() {
       <div class="setrow col"><span><img src="${IMG('star3')}">Якість</span><div class="seg3">${[['low', 'Низька'], ['mid', 'Середня'], ['high', 'Висока']].map(([k, n]) => `<button class="${(st.quality || 'high') === k ? 'on' : ''}" data-a="q" data-v="${k}">${n}</button>`).join('')}</div></div>
       <div class="setrow"><img src="${IMG('phone')}"><span>Повноекранний режим</span><button class="switch ${st.fullscreen !== false ? 'on' : ''}" data-a="fs" aria-label="Повноекранний режим"></button></div>
       <div class="setrow"><img src="${IMG('fireworks')}"><span>Анімації</span><button class="switch ${st.anim !== false ? 'on' : ''}" data-a="anim" aria-label="Анімації"></button></div></div>
+    ${NET.auth ? `<div class="setsec"><div class="sett">Бонус-код і код запрошення</div>${codeBoxHTML()}</div>` : ''}
+    ${NET.auth ? `<div class="setsec"><div class="sett">Приватність</div>
+      <div class="note small">Обери, хто може звертатися до тебе. Якщо вимкнути — відповідні кнопки зникнуть у твоєму профілі для інших гравців.</div>
+      ${[['gift', 'Подарунки від гравців', 'gift_red'], ['dm', 'Особисті повідомлення', 'mail2'], ['corp', 'Запрошення в корпорації', 'bz_office']].map(([k, n, ic]) =>
+        `<div class="setrow"><img src="${IMG(ic)}"><span>${n}</span><button class="switch ${privacy()[k] ? 'on' : ''}" data-a="priv" data-v="${k}" aria-label="${n}"></button></div>
+         <div class="setrow sub2"><em>${privacy()[k] ? 'Приймаю від усіх' : 'Не приймаю ні від кого'}</em></div>`).join('')}</div>` : ''}
     <div class="setsec"><div class="sett">Акаунт</div>
       <div class="setrow"><img src="${IMG('friends')}"><span>${NET.auth ? esc(NET.auth.player.nick) : tr('Гість (офлайн)')}</span><em class="netst ${NET.online ? 'on' : ''}">${NET.online ? '● онлайн' : '● офлайн'}</em></div>
       ${NET.auth ? '<button class="btn red wide" data-a="logout" style="margin-top:6px">Вийти з акаунта</button>' : NET.online ? '<button class="btn blue wide" data-a="login" style="margin-top:6px">Увійти / створити профіль</button>' : ''}</div>
@@ -2157,10 +2166,21 @@ function openMenu() {
     login: () => { closeModal(); const L = document.createElement('div'); L.id = 'loader'; L.className = 'authing'; L.innerHTML = '<div class="ld-bg"></div><div class="ld-shade"></div>'; document.body.appendChild(L); showAuth(() => { L.classList.add('dark'); setTimeout(() => L.remove(), 700); }); },
     fs: () => { st.fullscreen = st.fullscreen === false; save(); if (st.fullscreen !== false) goFullscreen(); else if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); modalRefresh(); },
     notif: () => { st.notif = st.notif === false; sfx('click'); save(); modalRefresh(); },
+    code: () => codeSubmit(),
+    codecopy: () => { const c = CODES.info && CODES.info.code; if (!c) return;
+      try { navigator.clipboard.writeText(c); } catch (e) {}
+      sfx('ding'); toast(tr('Код скопійовано') + ': ' + c, 'keys'); },
+    priv: async v => {
+      const P = privacy(); P[v] = P[v] ? 0 : 1; sfx('click'); $('#m-body')._h = null; modalRefresh();
+      const r = await api('privacy', { [v]: P[v] });
+      if (!r.ok) { P[v] = P[v] ? 0 : 1; toast(netErr(r.error), 'settings', true); } else if (r.player) NET.auth.player = r.player;
+      $('#m-body')._h = null; modalRefresh();
+    },
     q: v => { st.quality = v; applySettings(); sfx('click'); save(); modalRefresh(); },
     anim: () => { st.anim = st.anim === false; applySettings(); sfx('click'); save(); modalRefresh(); },
     lang: v => { st.lang = v; try { localStorage.setItem('mx_lang', v); } catch (e) {} saveNow(); applySettings(); pushSync(true); sfx('ding'); $('#m-body')._h = null; modalRefresh(); render(); },
   });
+  if (NET.auth && !CODES.info) codeLoad();
   const vr = $('#m-body');
   vr.oninput = e => { if (e.target.id === 'volr') { st.vol = +e.target.value; bgmUpdate(); e.target.style.setProperty('--p', st.vol + '%'); const vv = $('#volv'); if (vv) vv.textContent = st.vol + '%'; } };
   vr.onchange = e => { if (e.target.id === 'volr') { save(); sfx('coin'); $('#m-body')._h = null; } };
@@ -2696,3 +2716,48 @@ function invBannerSync() {
     go: () => { if (typeof openCorp === 'function') openCorp('inv'); } });
 }
 setInterval(() => { if (!document.hidden) invBannerSync(); }, 1000);
+
+// ===================================================================
+//  Коди: бонус-код від адміністрації та код запрошення між гравцями.
+//  Бонус-код можна ввести будь-коли, код запрошення — один раз із 15 рівня.
+// ===================================================================
+const CODES = { info: null, busy: false };
+async function codeLoad(force) {
+  if (!NET.auth || !NET.online || (CODES.info && !force)) return;
+  const r = await api('code_info'); if (!r.ok) return;
+  CODES.info = r;
+  if (modalRefresh && $('#m-body')) { $('#m-body')._h = null; modalRefresh(); }
+}
+function codeBoxHTML() {
+  const I = CODES.info;
+  let h = `<div class="cdbox"><div class="note small" style="margin:0">${tr('Уводь бонус-коди від адміністрації — і код запрошення того, хто покликав тебе в гру.')}</div>
+    <div class="cd-in"><input id="cd-input" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${tr('Твій код')}">
+      <button class="btn gold shine" data-a="code">${tr('Застосувати')}</button></div>`;
+  if (!I) return h + `<div class="note small" style="margin-top:8px">${tr('Завантаження…')}</div></div>`;
+  h += `<div class="cd-my"><img src="${IMG('keys')}" alt=""><div class="grow"><small>${tr('Твій код запрошення')}</small><b>${esc(I.code || '—')}</b></div>
+      <button class="cd-copy" data-a="codecopy">${tr('Копіювати')}</button></div>`;
+  const left = [];
+  if (I.invited) left.push(`${tr('За твоїм кодом прийшли')}: <b>${I.invited}</b>`);
+  if (I.used) left.push(I.by ? `${tr('Ти вже ввів(ла) код гравця')} ${esc(I.by)}` : tr('Код запрошення вже введено'));
+  else if (I.level < I.need) left.push(`${tr('Ввести чужий код запрошення можна з')} ${I.need} ${tr('рівня')} (${tr('твій')}: ${I.level})`);
+  else left.push(`${tr('Можеш ввести код того, хто покликав тебе — обидва отримаєте по')} ${I.bonus} ${tr('банкнот')}`);
+  h += `<div class="note small" style="margin:8px 0 0">${left.join('<br>')}</div></div>`;
+  return h;
+}
+async function codeSubmit() {
+  const el = $('#cd-input'); if (!el || CODES.busy) return;
+  const code = String(el.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 4) { sfx('err'); return toast(tr('Введи код'), 'keys'); }
+  CODES.busy = true;
+  const r = await api('code_use', { code });
+  CODES.busy = false;
+  if (!r.ok) { sfx('err'); return toast(netErr(r.error), 'keys', true); }
+  el.value = '';
+  applyReward(r.reward); save(); render();
+  const items = (r.reward || []).map(x => { const v = rewardView(x); return { img: v.img, text: '+' + v.text.replace('×', '') }; });
+  sfx('level'); confetti(40);
+  showReward({ title: r.kind === 'invite' ? 'Код запрошення прийнято!' : 'Бонус-код активовано!', img: 'keys',
+    name: r.code, items,
+    text: r.kind === 'invite' ? `${tr('Гравець')} ${r.nick} ${tr('теж отримає нагороду. Дякуємо, що ви разом!')}` : tr('Стеж за новими кодами в чаті й новинах гри.') });
+  codeLoad(true);
+}

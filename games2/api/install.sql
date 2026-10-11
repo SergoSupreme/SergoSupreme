@@ -406,7 +406,6 @@ CREATE TABLE IF NOT EXISTS corp_invest (
   corp_id       INT UNSIGNED NOT NULL,
   starter_id    INT UNSIGNED NOT NULL,
   mode          VARCHAR(8)   NOT NULL DEFAULT 'easy',
-  place         VARCHAR(8)   NOT NULL DEFAULT 'hall',
   seed          INT UNSIGNED NOT NULL DEFAULT 1,
   lvl           INT UNSIGNED NOT NULL DEFAULT 1,
   state         TINYINT      NOT NULL DEFAULT 0,   -- 0 триває, 2 завершено
@@ -496,6 +495,30 @@ CREATE TABLE IF NOT EXISTS tr_cache (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Пуш-сповіщення (Firebase): токени пристроїв, черга, розсилки, лічильники
+-- Бонус-коди від адміністрації: код латиницею, нагорода й ліміт активацій
+CREATE TABLE IF NOT EXISTS bonus_codes (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code        VARCHAR(24) CHARACTER SET ascii NOT NULL,
+  reward      TEXT         NOT NULL,
+  max_uses    INT UNSIGNED NOT NULL DEFAULT 0,   -- 0 — без обмежень
+  used        INT UNSIGNED NOT NULL DEFAULT 0,
+  active      TINYINT(1)   NOT NULL DEFAULT 1,
+  note        VARCHAR(120) NULL,
+  expires_at  INT UNSIGNED NOT NULL DEFAULT 0,   -- 0 — безстроково
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS bonus_code_uses (
+  code_id     INT UNSIGNED NOT NULL,
+  player_id   INT UNSIGNED NOT NULL,
+  used_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (code_id, player_id),
+  KEY ix_player (player_id),
+  CONSTRAINT fk_bcu_code FOREIGN KEY (code_id) REFERENCES bonus_codes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS push_tokens (
   token       VARCHAR(255) CHARACTER SET ascii NOT NULL,
   player_id   INT UNSIGNED NOT NULL,

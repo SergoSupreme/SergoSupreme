@@ -5,7 +5,7 @@
 const ADM = { tab: 'home', view: null, cache: {} };
 const isAdmin = () => !!(typeof NET !== 'undefined' && NET.auth && NET.auth.player && +NET.auth.player.access === 1);
 const ADM_ERR = { forbidden: 'Немає прав адміністратора', no_save: 'Гравець ще не має збереженої гри', self: 'Не можна застосувати до себе', self_access: 'Не можна зняти права з себе',
-  no_rewards: 'Додай хоча б один подарунок', bad_dates: 'Кінець акції має бути пізніше початку', nick_taken: 'Нікнейм зайнятий', password_short: 'Пароль — щонайменше 6 символів', empty: 'Заповни назву', need_reason: 'Вкажи причину', bad_term: 'Невірний термін', no_cats: 'Обери хоча б одну категорію' };
+  no_rewards: 'Додай хоча б один подарунок', code_chars: 'Код — 4–24 символи латиницею або цифрами', code_exists: 'Такий код уже існує', bad_dates: 'Кінець акції має бути пізніше початку', nick_taken: 'Нікнейм зайнятий', password_short: 'Пароль — щонайменше 6 символів', empty: 'Заповни назву', need_reason: 'Вкажи причину', bad_term: 'Невірний термін', no_cats: 'Обери хоча б одну категорію' };
 const admErr = e => ADM_ERR[e] || (typeof netErr === 'function' ? netErr(e) : e);
 const aFmt = n => fmt(+n || 0);
 const aAgo = t => { const s = Math.max(0, Date.now() / 1000 - t); return s < 60 ? 'щойно' : s < 3600 ? Math.floor(s / 60) + ' хв тому' : s < 86400 ? Math.floor(s / 3600) + ' год тому' : Math.floor(s / 86400) + ' дн тому'; };
@@ -83,9 +83,9 @@ function admChartsWire(root) {
 const dLabel = d => { const [y, m, dd] = d.split('-'); return `${dd}.${m}`; };
 
 // ---------- каркас ----------
-const ADM_DESC = { home: 'статистика й графіки', online: 'хто зараз у грі', players: 'пошук і керування', don: 'заявки й оплати', gifts: 'подарунки гравців', give: 'роздачі в пошту', promos: 'знижки й бонуси', news: 'новини для всіх', chat: 'модерація чату', push: 'сповіщення на телефон', server: 'сервер і база', log: 'дії адміністраторів' };
+const ADM_DESC = { home: 'статистика й графіки', online: 'хто зараз у грі', players: 'пошук і керування', don: 'заявки й оплати', gifts: 'подарунки гравців', give: 'роздачі в пошту', codes: 'бонус-коди для гравців', promos: 'знижки й бонуси', news: 'новини для всіх', chat: 'модерація чату', push: 'сповіщення на телефон', server: 'сервер і база', log: 'дії адміністраторів' };
 ADM.badge = {};
-const ADM_TABS = [['home', 'Огляд', 'chart'], ['online', 'Онлайн', 'phone'], ['players', 'Гравці', 'friends'], ['don', 'Донат', 'don_3'], ['gifts', 'Дарунки', 'giftbox'], ['give', 'Роздачі', 'gift_red'], ['promos', 'Акції', 'fireworks'], ['news', 'Новини', 'megaphone2'], ['chat', 'Чат', 'chat'], ['push', 'Пуші', 'bell'], ['server', 'Сервіс', 'gear'], ['log', 'Журнал', 'clipboard']];
+const ADM_TABS = [['home', 'Огляд', 'chart'], ['online', 'Онлайн', 'phone'], ['players', 'Гравці', 'friends'], ['don', 'Донат', 'don_3'], ['gifts', 'Дарунки', 'giftbox'], ['give', 'Роздачі', 'gift_red'], ['codes', 'Коди', 'keys'], ['promos', 'Акції', 'fireworks'], ['news', 'Новини', 'megaphone2'], ['chat', 'Чат', 'chat'], ['push', 'Пуші', 'bell'], ['server', 'Сервіс', 'gear'], ['log', 'Журнал', 'clipboard']];
 function openAdmin(tab) {
   if (!isAdmin()) return toast('Немає доступу', 'lock', true);
   if (!NET.online) return toast(netErr('offline'), 'lock', true);
@@ -132,6 +132,7 @@ async function admRender() {
     if (tab === 'home') html = await admHome();
     if (tab === 'players') html = view ? await admPlayer(view) : await admPlayers();
     if (tab === 'give') html = await admGive();
+    if (tab === 'codes') html = await admCodes();
     if (tab === 'promos') html = await admPromos(view);
     if (tab === 'news') html = await admNews(view);
     if (tab === 'chat') html = await admChat();
@@ -197,7 +198,7 @@ async function admPlayers() {
     <section class="adm-plist">${r.items.map(p => aPRow(p)).join('') || aEmpty('magnifier', 'Нікого не знайдено')}</section>
     ${aPager(ADM.page, pages, 'players')}`;
 }
-const HIST_K = { register: ['star3', 'Реєстрація'], login: ['phone', 'Вхід у гру'], admin: ['crown', 'Зміни адміністратора'], donate: ['don_3', 'Донат підтверджено'], promo: ['fireworks', 'Акція'], friend: ['friends', 'Новий друг'], gift: ['giftbox', 'Подарував(ла)'],
+const HIST_K = { register: ['star3', 'Реєстрація'], login: ['phone', 'Вхід у гру'], admin: ['crown', 'Зміни адміністратора'], donate: ['don_3', 'Донат підтверджено'], promo: ['fireworks', 'Акція'], code: ['keys', 'Бонус-код'], invite: ['friends', 'Код запрошення'], friend: ['friends', 'Новий друг'], gift: ['giftbox', 'Подарував(ла)'],
   chest: ['chest_purple', 'Скриня'], level: ['ach_star', 'Новий рівень'], build: ['crane', 'Будівництво'], maze: ['keys', 'Лабіринт'], lotto: ['lt_2', 'Лотерея'], daily: ['clipboard', 'Щоденна нагорода'], buy: ['cart', 'Покупка'] };
 const SANC = { block: ['Блокування акаунта', 'lock', 'Гравець не зможе увійти в гру'], chat: ['Бан у чаті', 'chat', 'Не зможе писати в загальний чат і на форум'], dm: ['Бан в особистих', 'mail2', 'Не зможе писати особисті повідомлення'] };
 const TERMS = [[1, '1 год'], [6, '6 год'], [12, '12 год'], [24, '24 год'], [72, '3 дні'], [168, '7 днів'], [720, '30 днів'], [0, 'Назавжди']];
@@ -285,11 +286,11 @@ function openPick(btn) {
 }
 function applyPick(type, v, d) {
   if (type === 'sort') { ADM.sort = v; ADM.page = 0; return admRender(); }
-  const pre = d.pre, i = +d.i; if (pre === 'p') promoSync(); else rwSync('g');
-  const L = pre === 'g' ? ADM.rw : ADM.pf.rw;
+  const pre = d.pre, i = +d.i; if (pre === 'p') promoSync(); else if (pre === 'c') codeSync(); else rwSync('g');
+  const L = rwList(pre);
   if (type === 'rk') L[i] = v === 'chest' ? { kind: 'chest', id: 'purple', n: 1 } : { kind: v, n: L[i].kind === 'chest' ? 50 : (L[i].n || 1) };
   if (type === 'rc') L[i].id = v;
-  if (pre === 'g') admRender(); else document.getElementById('adm-main').innerHTML = admPromoForm();
+  rwRepaint(pre);
 }
 function aPager(page, pages, key) {
   if (pages <= 1) return '';
@@ -319,6 +320,45 @@ async function admGive() {
     <label class="adm-sw"><input type="checkbox" id="gv-push" checked><i></i><span>🔔 Надіслати пуш-сповіщення на телефони</span></label>
     <button class="adm-b gold wide" data-act="give">Надіслати в пошту</button></section>
     <section class="adm-card">${aHead('clipboard', 'Останні роздачі')}${(r.items || []).map(g => { const rw = JSON.parse(g.reward || '[]'); const list = Array.isArray(rw) ? rw : [rw]; return `<div class="adm-row static"><img class="ri" src="${IMG('gift_red')}"><div class="grow"><b>${esc(g.title)}</b><small>${g.nick ? 'для ' + esc(g.nick) : 'усім'} · ${aAgo(g.t)} · забрали: ${g.claims}</small><div class="rchips">${rewChips(list)}</div></div></div>`; }).join('') || aEmpty('gift_red', 'Роздач ще не було')}</section>`;
+}
+
+// ---------- Бонус-коди ----------
+ADM.cf = null;                                  // форма коду, що редагується
+ADM.crw = [{ kind: 'bucks', n: 200 }];          // нагорода для форми
+const codeBlank = () => ({ id: 0, code: '', max: 0, active: 1, note: '', expires: 0 });
+const codeState = c => !c.active ? ['off', 'Вимкнено'] : c.expires && c.expires * 1000 < Date.now() ? ['off', 'Час вийшов']
+  : c.max && c.used >= c.max ? ['off', 'Активації вичерпано'] : ['on', 'Діє'];
+async function admCodes() {
+  const r = await aApi('adm_codes'), list = ADM.cache.codes = r.items || [];
+  const f = ADM.cf || (ADM.cf = codeBlank());
+  return `<section class="adm-card glow">${aHead('keys', f.id ? 'Редагування коду' : 'Новий бонус-код', 'гравці вводять його в налаштуваннях гри')}
+    <label class="adm-f"><span>Код <small>(лише латиниця й цифри, 4–24 символи)</small></span>
+      <input id="cd-code" class="adm-code" maxlength="24" placeholder="NEWYEAR200" value="${esc(f.code)}" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+    <div class="adm-f"><span>Нагорода</span>${rewRows(ADM.crw, 'c')}</div>
+    <div class="adm-preset">${[[{ kind: 'bucks', n: 200 }], [{ kind: 'bucks', n: 500 }], [{ kind: 'coins', n: 500000 }], [{ kind: 'bucks', n: 100 }, { kind: 'keys', n: 10 }]].map((p, i) => `<button data-cpreset="${i}">${rewChips(p)}</button>`).join('')}</div>
+    <label class="adm-f"><span>Скільки разів можна активувати <small>(0 — без обмежень; один гравець усе одно лише раз)</small></span>
+      <input id="cd-max" type="number" min="0" inputmode="numeric" value="${f.max || 0}"></label>
+    <label class="adm-f"><span>Нотатка для себе <small>(гравці її не бачать)</small></span><input id="cd-note" maxlength="120" placeholder="Код для стріму" value="${esc(f.note || '')}"></label>
+    <label class="adm-sw"><input type="checkbox" id="cd-act" ${f.active ? 'checked' : ''}><i></i><span>Код діє</span></label>
+    <div class="adm-actions"><button class="adm-b gold" data-act="code-save">${f.id ? 'Зберегти' : 'Створити код'}</button>
+      ${f.id ? '<button class="adm-b ghost" data-act="code-new">Новий код</button>' : ''}</div></section>
+    <section class="adm-card">${aHead('clipboard', 'Коди', list.length ? list.length + ' шт.' : '')}
+      ${list.map(c => { const [cls, st] = codeState(c);
+        return `<div class="adm-row static code-row ${cls}"><div class="grow"><b class="adm-code-v">${esc(c.code)}</b>
+          <small>${st} · активацій: ${c.used}${c.max ? ' / ' + c.max : ' / ∞'}${c.note ? ' · ' + esc(c.note) : ''}</small>
+          <div class="rchips">${rewChips(c.reward)}</div></div>
+          <div class="adm-row-act"><button class="adm-b ghost sq" data-act="code-copy" data-v="${esc(c.code)}" title="Скопіювати">⧉</button>
+            <button class="adm-b ghost sq" data-act="code-edit" data-i="${c.id}" title="Редагувати">✎</button>
+            <button class="adm-b ${c.active ? 'warn' : 'ok'} sq" data-act="code-act" data-i="${c.id}" data-v="${c.active ? 0 : 1}" title="${c.active ? 'Вимкнути' : 'Увімкнути'}">${c.active ? '⏸' : '▶'}</button>
+            <button class="adm-b danger sq" data-act="code-del" data-i="${c.id}" title="Видалити">✕</button></div></div>`; }).join('') || aEmpty('keys', 'Кодів ще немає')}</section>`;
+}
+function codeSync() {
+  const v = id => { const e = document.getElementById(id); return e ? e.value : undefined; };
+  if (v('cd-code') === undefined) return ADM.cf;
+  ADM.cf = { ...(ADM.cf || codeBlank()), code: v('cd-code').toUpperCase().replace(/[^A-Z0-9]/g, ''), max: Math.max(0, +v('cd-max') || 0),
+    note: v('cd-note'), active: document.getElementById('cd-act').checked ? 1 : 0 };
+  rwSync('c');
+  return ADM.cf;
 }
 
 // ---------- Акції ----------
@@ -513,7 +553,7 @@ async function admPush() {
       <details class="adm-det"><summary>Налаштування cron (щохвилини)</summary><small class="adm-hint">Команда: <b>php …/games2/api/cron.php</b> або посилання:<br><code>${esc(location.origin + location.pathname.replace(/[^/]*$/, ''))}api/cron.php?key=${esc(P.cron)}</code></small></details></section>`;
 }
 // ---------- Журнал ----------
-const LOG_N = { edit: 'Редагування', ban: 'Блокування', unban: 'Розблокування', mute: 'Бан чату', unmute: 'Зняв бан', kick: 'Вихід з пристроїв', reset: 'Скидання прогресу', delete: 'Видалення', give: 'Роздача', promo: 'Акція', promo_del: 'Видалив акцію', news: 'Новина', news_del: 'Видалив новину', chat_del: 'Видалив повідомлення', dmban: 'Бан ЛС', gift_del: 'Видалив подарунок', settings: 'Налаштування', cleanup: 'Очищення', push: 'Пуш-сповіщення', tool: 'Інструмент', donate_ok: 'Донат підтверджено', donate_no: 'Донат відхилено' };
+const LOG_N = { edit: 'Редагування', ban: 'Блокування', unban: 'Розблокування', mute: 'Бан чату', unmute: 'Зняв бан', kick: 'Вихід з пристроїв', reset: 'Скидання прогресу', delete: 'Видалення', give: 'Роздача', promo: 'Акція', promo_del: 'Видалив акцію', news: 'Новина', news_del: 'Видалив новину', chat_del: 'Видалив повідомлення', dmban: 'Бан ЛС', gift_del: 'Видалив подарунок', code: 'Бонус-код', code_on: 'Увімкнув код', code_off: 'Вимкнув код', code_del: 'Видалив код', settings: 'Налаштування', cleanup: 'Очищення', push: 'Пуш-сповіщення', tool: 'Інструмент', donate_ok: 'Донат підтверджено', donate_no: 'Донат відхилено' };
 const LOG_IC = { edit: '✎', ban: '⛔', unban: '✓', mute: '🔇', unmute: '🔈', dmban: '✉', kick: '⏏', reset: '↺', delete: '🗑', give: '🎁', promo: '🔥', promo_del: '🔥', news: '📢', news_del: '📢', chat_del: '💬', push: '🔔', tool: '🛠', donate_ok: '💵', donate_no: '✕', gift_del: '🎁', cleanup: '🧹', settings: '⚙' };
 ADM.logPage = 0;
 async function admLog() {
@@ -530,12 +570,16 @@ async function admLog() {
 }
 
 // ---------- обробка натискань ----------
+// g — роздача, p — акція, c — бонус-код
+const rwList = pre => pre === 'g' ? ADM.rw : pre === 'c' ? ADM.crw : ADM.pf.rw;
 function rwSync(pre) {
   if (pre === 'g') { const v = id => { const e = document.getElementById(id); return e ? e.value : undefined; }; if (v('gv-to') !== undefined) ADM.gv = { to: v('gv-to'), title: v('gv-title'), text: v('gv-text') }; }
-  const list = pre === 'g' ? ADM.rw : ADM.pf.rw;
+  const list = rwList(pre);
   document.querySelectorAll(`#adm [data-rn="${pre}"]`).forEach(el => { list[+el.dataset.i].n = Math.max(1, +el.value || 1); });
   return list;
 }
+// перемалювати ту форму, якій належить редактор нагород
+function rwRepaint(pre) { if (pre === 'p') document.getElementById('adm-main').innerHTML = admPromoForm(); else admRender(); }
 function pqSync() { const v = id => document.getElementById(id); if (v('pq-title')) ADM.pq = { ...ADM.pq, to: v('pq-to').value, title: v('pq-title').value, text: v('pq-text').value }; }
 function promoSync() {
   const p = ADM.pf; if (!p) return;
@@ -579,8 +623,9 @@ async function admClick(e) {
   if (d.page !== undefined && t.matches('[data-page]')) { ADM.page = +d.page; return admRender(); }
   if (d.step) { const i = document.getElementById('pf-' + d.step); const big = d.step === 'coins' ? 10000 : d.step === 'xp' ? 1000 : d.step === 'bucks' ? 10 : 1; i.value = Math.max(0, (+i.value || 0) + d.d * big); return; }
   // подарунки (роздача / акція)
-  if (d.radd) { const pre = d.radd; if (pre === 'p') promoSync(); else rwSync('g'); (pre === 'g' ? ADM.rw : ADM.pf.rw).push({ kind: 'bucks', n: 50 }); return pre === 'g' ? admRender() : (main.innerHTML = admPromoForm()); }
-  if (d.rdel) { const pre = d.rdel; if (pre === 'p') promoSync(); else rwSync('g'); (pre === 'g' ? ADM.rw : ADM.pf.rw).splice(+d.i, 1); return pre === 'g' ? admRender() : (main.innerHTML = admPromoForm()); }
+  if (d.radd) { const pre = d.radd; if (pre === 'p') promoSync(); else if (pre === 'c') codeSync(); else rwSync('g'); rwList(pre).push({ kind: 'bucks', n: 50 }); return rwRepaint(pre); }
+  if (d.rdel) { const pre = d.rdel; if (pre === 'p') promoSync(); else if (pre === 'c') codeSync(); else rwSync('g'); rwList(pre).splice(+d.i, 1); return rwRepaint(pre); }
+  if (d.cpreset) { codeSync(); ADM.crw = [[{ kind: 'bucks', n: 200 }], [{ kind: 'bucks', n: 500 }], [{ kind: 'coins', n: 500000 }], [{ kind: 'bucks', n: 100 }, { kind: 'keys', n: 10 }]][+d.cpreset].map(x => ({ ...x })); return admRender(); }
   if (d.preset) { rwSync('g'); ADM.rw = [[{ kind: 'bucks', n: 50 }], [{ kind: 'bucks', n: 100 }, { kind: 'coins', n: 100000 }], [{ kind: 'keys', n: 10 }], [{ kind: 'chest', id: 'red', n: 1 }]][+d.preset].map(x => ({ ...x })); return admRender(); }
   if (d.ptnew) { ADM.newType = d.ptnew; }
   if (d.ptype) { promoSync(); ADM.pf.type = d.ptype; ADM.pf.pct = d.ptype === 'donate' ? 50 : 30; main.innerHTML = admPromoForm(); return; }
@@ -642,6 +687,27 @@ async function admClick(e) {
     const rw = rwSync('g'), to = document.getElementById('gv-to').value.trim(), title = document.getElementById('gv-title').value, text = document.getElementById('gv-text').value;
     return admConfirm({ title: to ? `Надіслати гравцю ${esc(to)}?` : 'Надіслати ВСІМ гравцям?', text: `<div class="rchips">${rewChips(rw)}</div>`, danger: false, yes: 'Надіслати' },
       async () => { if ((await aApi('adm_give', { to, title, text, rewards: rw, push: document.getElementById('gv-push') && document.getElementById('gv-push').checked ? 1 : 0 })).ok) { admToast('Роздачу надіслано в пошту'); ADM.gv = null; ADM.rw = [{ kind: 'bucks', n: 50 }]; admRender(); } });
+  }
+  if (act === 'code-new') { ADM.cf = codeBlank(); ADM.crw = [{ kind: 'bucks', n: 200 }]; return admRender(); }
+  if (act === 'code-copy') { try { await navigator.clipboard.writeText(d.v); admToast('Код скопійовано: ' + d.v); } catch (e) { admToast(d.v); } return; }
+  if (act === 'code-edit') {
+    const c = (ADM.cache.codes || []).find(x => x.id === +d.i); if (!c) return;
+    ADM.cf = { id: c.id, code: c.code, max: c.max, active: c.active, note: c.note, expires: c.expires };
+    ADM.crw = (c.reward || []).map(x => ({ ...x })); admRender(); document.getElementById('adm-main').scrollIntoView({ block: 'start' }); return;
+  }
+  if (act === 'code-act') { if ((await aApi('adm_code_act', { id: +d.i, v: +d.v })).ok) { admToast(+d.v ? 'Код увімкнено' : 'Код вимкнено'); admRender(); } return; }
+  if (act === 'code-del') {
+    const c = (ADM.cache.codes || []).find(x => x.id === +d.i);
+    return admConfirm({ title: 'Видалити код?', text: `Код <b>${esc(c ? c.code : '')}</b> перестане працювати назавжди.` },
+      async () => { if ((await aApi('adm_code_del', { id: +d.i })).ok) { admToast('Код видалено'); if (ADM.cf && ADM.cf.id === +d.i) { ADM.cf = codeBlank(); ADM.crw = [{ kind: 'bucks', n: 200 }]; } admRender(); } });
+  }
+  if (act === 'code-save') {
+    const f = codeSync();
+    if (!/^[A-Z0-9]{4,24}$/.test(f.code)) return admToast('Код — 4–24 символи латиницею або цифрами', true);
+    if (!ADM.crw.length) return admToast('Додай хоча б одну нагороду', true);
+    const r = await aApi('adm_code_save', { id: f.id, code: f.code, rewards: ADM.crw, max: f.max, active: f.active, note: f.note, expires: f.expires });
+    if (r.ok) { admToast(f.id ? 'Код збережено' : 'Код створено: ' + f.code); ADM.cf = codeBlank(); ADM.crw = [{ kind: 'bucks', n: 200 }]; admRender(); }
+    return;
   }
   if (act === 'promo-save') { promoSync(); const p = ADM.pf; const r = await aApi('adm_promo_save', { id: p.id, type: p.type, pct: p.pct, cats: p.cats, pack: p.pack, title: p.title, text: p.body, icon: p.icon, color: p.color, rewards: p.type === 'donate' ? p.rw : [], start: p.s, end: p.e, active: p.active, push: !p.id && document.getElementById('pf-push') && document.getElementById('pf-push').checked ? 1 : 0 }); if (r.ok) { admToast(p.id ? 'Акцію збережено' : 'Акцію запущено'); admGo('promos'); } return; }
   if (act === 'promo-del') return admConfirm({ title: 'Видалити акцію?', text: 'Гравці більше її не побачать.' }, async () => { if ((await aApi('adm_promo_del', { id: ADM.pf.id })).ok) { admToast('Акцію видалено'); admGo('promos'); } });

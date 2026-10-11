@@ -4,7 +4,7 @@
 // ===================================================================
 const IMG = n => 'images/icons/' + n + '.png';
 const GAME_TITLE = 'Мій Хмарочос';
-const VERSION = '1.8';
+const VERSION = '1.8.1';
 const BUCK = 'cash';          // іконка банкнот
 const COIN = 'coin';          // іконка монет
 
@@ -609,19 +609,11 @@ const INVEST = {
   minShare: 1,                 // % прогресу команди для персональної нагороди
   icon: 'ic_9',
   // rounds — питань, sec — секунд на відповідь, k — складність (потрібний прогрес),
-  // rev — виручка за годину для повного бонусу (множиться на рівень), corp/me — нагороди
+  // rev — виручка за годину для повного бонусу (росте з рівнем корпорації), corp/me — нагороди
   modes: [
-    { id: 'easy', name: 'Легкий',     icon: 'case_1', color: '#2f7fe0', rounds: 8,  sec: 22, k: 1.00, rev: 250000,  corp: { bucks: 500,  per: 45000 },  me: 100 },
-    { id: 'norm', name: 'Нормальний', icon: 'case_2', color: '#d79b1f', rounds: 10, sec: 17, k: 1.25, rev: 800000,  corp: { bucks: 1800, per: 85000 },  me: 150 },
-    { id: 'hard', name: 'Важкий',     icon: 'case_4', color: '#d2402f', rounds: 12, sec: 13, k: 1.50, rev: 2000000, corp: { bucks: 4000, per: 200000 }, me: 250 },
-  ],
-  // місце переговорів обирає директор — кожне дає свою перевагу
-  places: [
-    { id: 'hall', name: 'Конференц-зала',     img: 'bld_5',  note: 'Нейтральне місце без переваг' },
-    { id: 'bank', name: 'Корпоративний банк', img: 'bld_7',  note: '+10% до ваги правильних відповідей', ans: 1.10 },
-    { id: 'lux',  name: 'Готель-люкс',        img: 'bld_2',  note: '+4 секунди на кожну відповідь',      time: 4 },
-    { id: 'pent', name: 'Пентхаус вежі',      img: 'bld_10', note: '+15% до бонусу від виручки',         rev: 1.15 },
-    { id: 'park', name: 'Бізнес-парк',        img: 'bld_9',  note: '-5% до потрібного прогресу',         need: 0.95 },
+    { id: 'easy', name: 'Легкий',     icon: 'case_1', color: '#2f7fe0', rounds: 8,  sec: 22, k: 1.00, rev: 165000,  corp: { bucks: 500,  per: 45000 },  me: 100 },
+    { id: 'norm', name: 'Нормальний', icon: 'case_2', color: '#d79b1f', rounds: 10, sec: 17, k: 1.25, rev: 530000,  corp: { bucks: 1800, per: 85000 },  me: 150 },
+    { id: 'hard', name: 'Важкий',     icon: 'case_4', color: '#d2402f', rounds: 12, sec: 13, k: 1.50, rev: 1320000, corp: { bucks: 4000, per: 200000 }, me: 250 },
   ],
   q: {
   easy: [
@@ -705,7 +697,6 @@ const INVEST = {
   },
 };
 const invMode = id => INVEST.modes.find(m => m.id === id) || INVEST.modes[0];
-const invPlace = id => INVEST.places.find(p => p.id === id) || INVEST.places[0];
 
 // Сезонний пропуск: 30 рівнів, 100 очок сезону на рівень
 const PASS = { levels: 100, sp: 100, premium: 3000,

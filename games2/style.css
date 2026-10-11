@@ -911,6 +911,8 @@ button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 .setrow > img, .setrow span img { width: 30px; height: 30px; object-fit: contain; }
 .setrow > span { flex: 1; font-weight: 900; font-size: 14px; display: flex; align-items: center; gap: 10px; }
 .setrow.col { flex-direction: column; align-items: stretch; gap: 6px; }
+.setrow.sub2 { border-top: none; padding: 0 0 5px 40px; margin-top: -4px; }
+.setrow.sub2 em { font-style: normal; font: 800 11.5px var(--body); color: #9fb2e8; }
 .setrow.vol input { flex: 1.4; accent-color: #ffc531; height: 22px; }
 .setrow.vol b { width: 40px; text-align: right; font-size: 13px; color: #ffe27a; }
 .seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -2918,13 +2920,6 @@ img.ri, #toast span img.ri, .don-cf-bonus img.ri { display: inline-block; width:
 .invm-rev img { width: 17px; height: 17px; object-fit: contain; }
 .invm-rev b { color: #7dffa0; }
 
-.inv-places { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 7px; }
-.invp { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 5px; border-radius: 14px; cursor: pointer;
-  background: #16214f; border: 1.5px solid #34489a; color: inherit; }
-.invp.on { border-color: #ffc531; background: #1d2d6b; box-shadow: 0 0 12px rgba(255,197,49,.25); }
-.invp img { width: 46px; height: 46px; object-fit: contain; }
-.invp b { font: 900 11.5px var(--body); color: #fff; text-align: center; line-height: 1.15; }
-.invp small { font: 800 9.5px/1.25 var(--body); color: #9fb2e8; text-align: center; }
 .inv-start { margin: 12px 0 8px; }
 
 .inv-how { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
@@ -2999,3 +2994,28 @@ img.ri, #toast span img.ri, .don-cf-bonus img.ri { display: inline-block; width:
 .ivp small { display: flex; align-items: center; gap: 3px; font: 800 10.5px var(--body); color: #9fb2e8; }
 .ivp small img { width: 13px; height: 13px; object-fit: contain; }
 .ivp em { font-style: normal; font: 900 13px var(--body); color: #7dffa0; }
+
+/* ======================= Бонус-коди в адмін-панелі ======================= */
+.adm-code { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; }
+.adm-code-v { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 1.5px; font-size: 15px; }
+.code-row.off { opacity: .6; }
+.code-row.off .adm-code-v { text-decoration: line-through; }
+.adm-row-act { display: flex; gap: 4px; flex: none; }
+.adm-b.sq { width: 34px; padding: 0; display: grid; place-items: center; font-size: 15px; }
+.adm-b.ok { background: linear-gradient(#3ccf5a, #22a03f); color: #fff; }
+
+/* ======================= Коди в налаштуваннях гри ======================= */
+.cdbox { background: linear-gradient(#1b2a66, #111b4a); border: 1.5px solid #34489a; border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+.cd-in { display: flex; gap: 6px; margin-top: 8px; }
+.cd-in input { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase;
+  background: #0a1236; border: 1.5px solid #2f4390; border-radius: 12px; color: #fff; font-weight: 800; font-size: 15px; padding: 10px 12px; }
+.cd-in input::placeholder { letter-spacing: 1px; color: #5f7099; }
+.cd-in .btn { flex: none; }
+.cd-my { display: flex; align-items: center; gap: 9px; margin-top: 10px; padding: 10px; border-radius: 13px; background: rgba(10,18,54,.6); border: 1px solid #2b3c80; }
+.cd-my img { width: 30px; height: 30px; object-fit: contain; flex: none; }
+.cd-my .grow { min-width: 0; }
+.cd-my small { display: block; font: 800 11px var(--body); color: #9fb2e8; }
+.cd-my b { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; font-size: 17px; color: #ffe27a; }
+.cd-copy { flex: none; padding: 8px 12px; border: 0; border-radius: 11px; font: 900 12px var(--body); color: #06270f; cursor: pointer;
+  background: linear-gradient(#7dffa0, #3ccf5a); }
+.cd-copy:active { transform: translateY(1px); }

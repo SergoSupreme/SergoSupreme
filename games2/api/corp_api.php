@@ -159,6 +159,7 @@ switch ($a) {
     if (q('SELECT 1 FROM corp_invites WHERE player_id = ?', [$tid])->fetchColumn()) fail('corp_target_invited');
     if ((int)q('SELECT COUNT(*) FROM corp_members WHERE corp_id = ?', [$c['corp_id']])->fetchColumn() >= memberCap(corpLevel($c))) fail('corp_full');
     if (isBlocked($pid, $tid)) fail('blocked', 403);
+    if ((int)($p['pr_corp'] ?? 1) !== 1) fail('pr_corp', 403);
     q('INSERT INTO corp_invites (player_id, corp_id, from_id) VALUES (?, ?, ?)', [$tid, $c['corp_id'], $pid]);
     q('INSERT INTO mail (player_id, sender, icon, title, body, reward) VALUES (?, ?, ?, ?, ?, ?)', [$tid, $me['nick'], 'bz_office', 'Запрошення в корпорацію',
       "Гравець {$me['nick']} запрошує тебе вступити до корпорації «{$c['name']}».", json_encode(['kind' => 'corpinv', 'corp' => (int)$c['corp_id'], 'name' => $c['name'], 'emblem' => $c['emblem']])]);

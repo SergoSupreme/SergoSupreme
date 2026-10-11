@@ -19,7 +19,7 @@ function out($d, int $code = 200) { while (ob_get_level()) ob_end_clean(); heade
 function fail(string $err, int $code = 400) { out(['ok' => false, 'error' => $err], $code); }
 function rawBody(): string { static $r = null; if ($r === null) { $r = (string)file_get_contents('php://input'); if ($r !== '' && ($_SERVER['HTTP_CONTENT_ENCODING'] ?? '') === 'gzip') $r = @gzdecode($r) ?: ''; } return $r; }
 function body(): array { static $b = null; if ($b === null) { $raw = rawBody(); $b = $raw ? (json_decode($raw, true) ?: []) : []; if (!$b && !empty($_POST['payload'])) $b = json_decode($_POST['payload'], true) ?: []; } return $b; }
-const MIN_CLIENT = '1.8';
+const MIN_CLIENT = '1.8.1';
 function arg(string $k, $d = null) { $b = body(); return $b[$k] ?? ($_GET[$k] ?? $d); }
 
 function rate(string $key, int $max, int $win) {
@@ -68,14 +68,17 @@ function ensureSchema(bool $force = false) {
   if (!$force && is_file($flag)) return;
   // права доступу та обмеження гравців
   foreach (['access' => 'TINYINT(1) NOT NULL DEFAULT 0', 'muted' => 'TINYINT(1) NOT NULL DEFAULT 0', 'ban_until' => 'DATETIME NULL', 'ban_reason' => 'VARCHAR(200) NULL',
-            'chat_until' => 'DATETIME NULL', 'chat_reason' => 'VARCHAR(200) NULL', 'dm_until' => 'DATETIME NULL', 'dm_reason' => 'VARCHAR(200) NULL', 'device' => 'CHAR(32) NULL'] as $c => $def)
+            'chat_until' => 'DATETIME NULL', 'chat_reason' => 'VARCHAR(200) NULL', 'dm_until' => 'DATETIME NULL', 'dm_reason' => 'VARCHAR(200) NULL', 'device' => 'CHAR(32) NULL',
+            // приватність: 1 — приймаю від усіх, 0 — ні від кого
+            'pr_gift' => 'TINYINT(1) NOT NULL DEFAULT 1', 'pr_dm' => 'TINYINT(1) NOT NULL DEFAULT 1', 'pr_corp' => 'TINYINT(1) NOT NULL DEFAULT 1',
+            'invite_code' => 'VARCHAR(10) NULL', 'invited_by' => 'INT UNSIGNED NULL', 'invite_used' => 'TINYINT(1) NOT NULL DEFAULT 0'] as $c => $def)
     if (!q("SHOW COLUMNS FROM players LIKE '$c'")->fetch()) { db()->exec("ALTER TABLE players ADD COLUMN $c $def"); if ($c === 'access') db()->exec('UPDATE players SET access = 1 WHERE is_admin = 1'); }
   if (!q("SHOW COLUMNS FROM saves LIKE 'active_token'")->fetch()) db()->exec('ALTER TABLE saves ADD COLUMN active_token CHAR(64) NULL AFTER data');
   foreach (['maze_keys' => 'INT UNSIGNED NOT NULL DEFAULT 0', 'lift_lvl' => 'INT UNSIGNED NOT NULL DEFAULT 1', 'lobby_lvl' => 'INT UNSIGNED NOT NULL DEFAULT 1',
             'hotel_lvl' => 'INT UNSIGNED NOT NULL DEFAULT 1', 'chests' => 'INT UNSIGNED NOT NULL DEFAULT 0', 'achievements' => 'INT UNSIGNED NOT NULL DEFAULT 0'] as $c => $def)
     if (!q("SHOW COLUMNS FROM player_stats LIKE '$c'")->fetch()) db()->exec("ALTER TABLE player_stats ADD COLUMN $c $def");
   $sql = file_get_contents(__DIR__ . '/install.sql');
-  foreach (['player_floors', 'player_residents', 'friends', 'player_blocks', 'dm_messages', 'promos', 'promo_claims', 'balance_log', 'econ_daily', 'admin_log', 'reward_claims', 'gifts', 'settings', 'corps', 'corp_members', 'corp_invites', 'corp_don', 'corp_log', 'corp_chat', 'corp_invest', 'corp_invest_p', 'donations', 'tour_cups', 'tour_corp', 'tr_cache', 'push_tokens', 'push_web', 'push_queue', 'push_bcast', 'push_state', 'push_log'] as $t) if (preg_match('/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=[^;]+;/s', $sql, $m)) db()->exec($m[0]);
+  foreach (['player_floors', 'player_residents', 'friends', 'player_blocks', 'dm_messages', 'promos', 'promo_claims', 'balance_log', 'econ_daily', 'admin_log', 'reward_claims', 'gifts', 'settings', 'corps', 'corp_members', 'corp_invites', 'corp_don', 'corp_log', 'corp_chat', 'corp_invest', 'corp_invest_p', 'donations', 'tour_cups', 'tour_corp', 'tr_cache', 'bonus_codes', 'bonus_code_uses', 'push_tokens', 'push_web', 'push_queue', 'push_bcast', 'push_state', 'push_log'] as $t) if (preg_match('/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=[^;]+;/s', $sql, $m)) db()->exec($m[0]);
   // стандартні новини більше не потрібні — новини створює лише адміністратор
   q("DELETE FROM news WHERE id <= 7 AND title IN ('Ласкаво просимо!','Колекції','Лабіринт','Лотерея','Щаслива година','Вертолітний майданчик','Сезонний пропуск')");
   db()->exec('ALTER TABLE news AUTO_INCREMENT = 100');
@@ -94,7 +97,7 @@ function onlineSnap() {
   if (is_file($f) && filemtime($f) > time() - 300) return; @touch($f);
   try { q('INSERT IGNORE INTO online_log (t, n) SELECT ?, COUNT(*) FROM players WHERE last_seen > NOW() - INTERVAL 10 MINUTE', [intdiv(time(), 300) * 300]); q('DELETE FROM online_log WHERE t < ?', [time() - 30 * 86400]); } catch (Throwable $e) {}
 }
-function schemaFlag(): string { return sys_get_temp_dir() . '/mx_schema_v20_' . md5(cfg('db_name')); }
+function schemaFlag(): string { return sys_get_temp_dir() . '/mx_schema_v21_' . md5(cfg('db_name')); }
 // Звіряє ВСІ таблиці й колонки з install.sql: створює відсутні таблиці та додає відсутні колонки (стара або неповна база)
 function schemaSync() {
   $sql = (string)@file_get_contents(__DIR__ . '/install.sql');
@@ -138,7 +141,11 @@ function saveRow(int $pid) {
   $s = q('SELECT rev, data, active_token, UNIX_TIMESTAMP(updated_at) t FROM saves WHERE player_id = ?', [$pid])->fetch();
   return $s ? ['rev' => (int)$s['rev'], 'data' => json_decode($s['data']), 't' => (int)$s['t']] : null;
 }
-function pub(array $p): array { return ['id' => (int)$p['id'], 'nick' => $p['nick'], 'avatar' => $p['avatar'], 'lang' => $p['lang'], 'access' => (int)($p['access'] ?? 0), 'admin' => (int)($p['access'] ?? 0) === 1, 'hasPassword' => !empty($p['pass_hash'])]; }
+function pub(array $p): array { return ['id' => (int)$p['id'], 'nick' => $p['nick'], 'avatar' => $p['avatar'], 'lang' => $p['lang'], 'access' => (int)($p['access'] ?? 0), 'admin' => (int)($p['access'] ?? 0) === 1, 'hasPassword' => !empty($p['pass_hash']),
+  'privacy' => ['gift' => (int)($p['pr_gift'] ?? 1), 'dm' => (int)($p['pr_dm'] ?? 1), 'corp' => (int)($p['pr_corp'] ?? 1)],
+  'inviteCode' => (string)($p['invite_code'] ?? ''), 'inviteUsed' => (int)($p['invite_used'] ?? 0)]; }
+// Приватність: чи приймає гравець $p подарунки / особисті / запрошення в корпорацію
+function allows(array $p, string $what): bool { return (int)($p['pr_' . $what] ?? 1) === 1; }
 function cleanNick($n): string {
   $n = trim(preg_replace('/\s+/u', ' ', (string)$n));
   if (mb_strlen($n) < 3 || mb_strlen($n) > 20) fail('nick_length');
@@ -199,6 +206,7 @@ try {
   $a = (string)($_GET['a'] ?? arg('a', ''));
   require_once __DIR__ . '/tour.php'; // турнір кубків: функції + дії tour*
   require_once __DIR__ . '/push.php'; // пуш-сповіщення: функції + дії push_* і webpush_* (браузер)
+  require_once __DIR__ . '/codes.php'; // бонус-коди й коди запрошення: дії code_*
   if (strncmp($a, 'adm_', 4) === 0) { require __DIR__ . '/admin_api.php'; exit; }
   if (strncmp($a, 'corp_', 5) === 0) { require __DIR__ . '/corp_api.php'; exit; }
   switch ($a) {
@@ -268,6 +276,15 @@ try {
         if (!empty($p['pass_hash']) && !password_verify((string)arg('old_password', ''), $p['pass_hash'])) fail('bad_password', 401);
         q('UPDATE players SET pass_hash = ? WHERE id = ?', [password_hash((string)$pw, PASSWORD_DEFAULT), $p['id']]);
       }
+      out(['ok' => true, 'player' => pub(q('SELECT * FROM players WHERE id = ?', [$p['id']])->fetch())]);
+    }
+
+    // ---------- приватність: хто може писати, дарувати й запрошувати ----------
+    case 'privacy': {
+      $p = me(); ensureSchema();
+      $set = []; $args = [];
+      foreach (['gift', 'dm', 'corp'] as $k) { $v = arg($k); if ($v !== null) { $set[] = "pr_$k = ?"; $args[] = (int)$v ? 1 : 0; } }
+      if ($set) { $args[] = $p['id']; q('UPDATE players SET ' . implode(', ', $set) . ' WHERE id = ?', $args); }
       out(['ok' => true, 'player' => pub(q('SELECT * FROM players WHERE id = ?', [$p['id']])->fetch())]);
     }
 
@@ -496,6 +513,7 @@ try {
         'giftCount' => (int)q('SELECT COUNT(*) FROM gifts WHERE to_id = ?', [$id])->fetchColumn(),
         'corp' => (function () use ($id) { $c = q('SELECT c.id, c.name, c.emblem, m.role FROM corp_members m JOIN corps c ON c.id = m.corp_id WHERE m.player_id = ?', [$id])->fetch(); return $c ? ['id' => (int)$c['id'], 'name' => $c['name'], 'emblem' => $c['emblem'], 'role' => (int)$c['role']] : null; })(),
         'invited' => (bool)q('SELECT 1 FROM corp_invites WHERE player_id = ?', [$id])->fetchColumn(),
+        'okGift' => allows($p, 'gift'), 'okDm' => allows($p, 'dm'), 'okCorp' => allows($p, 'corp'),
         'gifts' => array_map('giftRow', q('SELECT g.id, g.gift, g.body, UNIX_TIMESTAMP(g.created_at) t, f.id fid, f.nick fnick, f.avatar favatar FROM gifts g JOIN players f ON f.id = g.from_id WHERE g.to_id = ? ORDER BY g.id DESC LIMIT 6', [$id])->fetchAll()),
       ], 'data' => (function () use ($id) { $d = json_decode((string)q('SELECT data FROM saves WHERE player_id = ? AND rev > 0', [$id])->fetchColumn());
           if (!is_object($d)) return null; foreach (['mail', 'dt', 'vip', 'coll', 'lotto', 'heli', 'pass', 'queue', 'chestInv', 'tipsDay', 'revLog'] as $k) unset($d->$k); return $d; })()]);
@@ -543,6 +561,7 @@ try {
       $me = me(); ensureSchema(); $p = peer(); rate('gift:' . $me['id'], 20, 60);
       if ((int)$p['id'] === (int)$me['id']) fail('self');
       if (isBlocked((int)$me['id'], (int)$p['id'])) fail('blocked', 403);
+      if (!allows($p, 'gift')) fail('pr_gift', 403);
       $cat = require __DIR__ . '/gifts.php'; $g = (string)arg('gift'); if (!isset($cat[$g])) fail('bad_gift');
       $text = mb_substr(strip_tags(trim((string)arg('text', ''))), 0, 300);
       q('INSERT INTO gifts (from_id, to_id, gift, price, body) VALUES (?, ?, ?, ?, ?)', [$me['id'], $p['id'], $g, $cat[$g], $text !== '' ? $text : null]);
@@ -612,6 +631,7 @@ try {
       $me = me(); restricted($me, 'dm'); ensureSchema(); $p = peer(); rate('dm:' . $me['id'], 20, 60);
       if ((int)$p['id'] === (int)$me['id']) fail('self');
       if (isBlocked((int)$me['id'], (int)$p['id'])) fail('blocked', 403);
+      if (!allows($p, 'dm') && !q('SELECT 1 FROM dm_messages WHERE from_id = ? AND to_id = ? LIMIT 1', [$p['id'], $me['id']])->fetchColumn()) fail('pr_dm', 403); // відповісти на вже розпочатий діалог можна завжди
       $text = cleanText(arg('text'), 1000);
       $rid = (int)arg('reply', 0); if ($rid && !q('SELECT 1 FROM dm_messages WHERE id = ? AND ((from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?))', [$rid, $me['id'], $p['id'], $p['id'], $me['id']])->fetchColumn()) $rid = 0;
       q('INSERT INTO dm_messages (from_id, to_id, body, reply_to) VALUES (?, ?, ?, ?)', [$me['id'], $p['id'], $text, $rid ?: null]);
