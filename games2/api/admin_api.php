@@ -232,6 +232,36 @@ switch ($a) {
                                        AND m.reward NOT LIKE '%corpinv%' ORDER BY m.id DESC LIMIT 30")->fetchAll()]);
   }
 
+  // ---------- корпорації ----------
+  case 'adm_corps': {
+    $qs = trim((string)arg('q', '')); $page = max(0, (int)arg('page', 0)); $per = 20;
+    $w = ''; $pr = [];
+    if ($qs !== '') { $w = 'WHERE c.name_lc LIKE ? OR c.id = ?'; $pr = ['%' . mb_strtolower($qs) . '%', ctype_digit($qs) ? (int)$qs : 0]; }
+    $total = (int)q("SELECT COUNT(*) FROM corps c $w", $pr)->fetchColumn();
+    $rows = q("SELECT c.id, c.name, c.emblem, c.lvl, c.xp, c.bucks, c.coins, c.tasks_done, c.sets, UNIX_TIMESTAMP(c.created_at) t,
+                      p.nick director, p.id director_id, (SELECT COUNT(*) FROM corp_members m WHERE m.corp_id = c.id) members
+               FROM corps c LEFT JOIN players p ON p.id = c.director_id $w ORDER BY c.lvl DESC, c.id ASC LIMIT $per OFFSET " . ($page * $per), $pr)->fetchAll();
+    out(['ok' => true, 'total' => $total, 'per' => $per, 'items' => $rows]);
+  }
+  case 'adm_corp': {
+    require_once __DIR__ . '/corp_api_admin.php';
+    out(['ok' => true] + admCorpCard((int)arg('id')));
+  }
+  case 'adm_corp_save': {
+    require_once __DIR__ . '/corp_api_admin.php';
+    out(admCorpSave((int)arg('id')));
+  }
+  case 'adm_corp_member': {
+    require_once __DIR__ . '/corp_api_admin.php';
+    out(admCorpMember((int)arg('id'), (int)arg('pid'), (string)arg('op'), (int)arg('role', 0)));
+  }
+  case 'adm_corp_del': {
+    $id = (int)arg('id'); $n = (string)q('SELECT name FROM corps WHERE id = ?', [$id])->fetchColumn();
+    if ($n === '') fail('not_found', 404);
+    q('DELETE FROM corps WHERE id = ?', [$id]); alog('corp_del', $n);
+    out(['ok' => true]);
+  }
+
   // ---------- бонус-коди ----------
   case 'adm_codes': {
     require_once __DIR__ . '/codes.php';

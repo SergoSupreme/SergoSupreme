@@ -4,7 +4,7 @@
 // ===================================================================
 const IMG = n => 'images/icons/' + n + '.png';
 const GAME_TITLE = 'Мій Хмарочос';
-const VERSION = '1.8.3';
+const VERSION = '1.9';
 const BUCK = 'cash';          // іконка банкнот
 const COIN = 'coin';          // іконка монет
 
@@ -608,14 +608,13 @@ const INVEST = {
   cooldown: 24 * 3600,         // одні переговори на добу
   minShare: 1,                 // % прогресу команди для персональної нагороди
   icon: 'ic_9',
-  // rounds x sec — уся тривалість переговорів: 5 хв / 3 хв / 1 хв 40 с. За цей час треба заповнити шкалу,
-  // тож у важкому режимі питань менше, а часу на кожне — найменше.
-  // rounds — питань, sec — секунд на відповідь, k — складність (потрібний прогрес),
-  // rev — виручка за годину для повного бонусу (росте з рівнем корпорації), corp/me — нагороди
+  // Головне — встигнути набрати 100% за відведений час, а не відповісти на певну кількість питань.
+  // dur — уся тривалість переговорів, sec — скільки секунд на одне питання (вони йдуть по колу до кінця часу),
+  // k — складність (потрібний прогрес), rev — виручка/год для повного бонусу (росте з рівнем корпорації)
   modes: [
-    { id: 'easy', name: 'Легкий',     icon: 'case_1', color: '#2f7fe0', rounds: 15, sec: 20, k: 1.00, rev: 165000,  corp: { bucks: 500,  per: 45000 },  me: 100 },
-    { id: 'norm', name: 'Нормальний', icon: 'case_2', color: '#d79b1f', rounds: 12, sec: 15, k: 1.25, rev: 530000,  corp: { bucks: 1800, per: 85000 },  me: 150 },
-    { id: 'hard', name: 'Важкий',     icon: 'case_4', color: '#d2402f', rounds: 10, sec: 10, k: 1.50, rev: 1320000, corp: { bucks: 4000, per: 200000 }, me: 250 },
+    { id: 'easy', name: 'Легкий',     icon: 'case_1', color: '#2f7fe0', dur: 300, sec: 20, k: 1.00, rev: 165000,  corp: { bucks: 500,  per: 45000 },  me: 100 },
+    { id: 'norm', name: 'Нормальний', icon: 'case_2', color: '#d79b1f', dur: 180, sec: 15, k: 1.25, rev: 530000,  corp: { bucks: 1800, per: 85000 },  me: 150 },
+    { id: 'hard', name: 'Важкий',     icon: 'case_4', color: '#d2402f', dur: 100, sec: 10, k: 1.50, rev: 1320000, corp: { bucks: 4000, per: 200000 }, me: 250 },
   ],
   q: {
   easy: [
@@ -699,6 +698,7 @@ const INVEST = {
   },
 };
 const invMode = id => INVEST.modes.find(m => m.id === id) || INVEST.modes[0];
+const invRounds = m => Math.max(1, Math.floor(m.dur / m.sec));
 
 // Сезонний пропуск: 30 рівнів, 100 очок сезону на рівень
 const PASS = { levels: 100, sp: 100, premium: 3000,

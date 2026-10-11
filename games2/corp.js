@@ -386,7 +386,7 @@ const invDaysTxt = () => INVEST.days.map(d => tr(invDayName(d))).join(', ');
 const invRevNeed = (m, lvl) => Math.round(m.rev * (1 + 0.25 * Math.max(0, lvl - 1)));
 const invMyRev = () => (typeof revHourRate === 'function' ? revHourRate() : 0);
 // уся тривалість переговорів: 5 хв / 3 хв / 1 хв 40 с
-const invDur = m => { const t = m.rounds * m.sec, mm = Math.floor(t / 60), ss = t % 60; return mm + ' ' + tr('хв') + (ss ? ' ' + ss + ' ' + tr('с') : ''); };
+const invDur = m => { const mm = Math.floor(m.dur / 60), ss = m.dur % 60; return mm + ' ' + tr('хв') + (ss ? ' ' + ss + ' ' + tr('с') : ''); };
 const invCool = () => Math.max(0, INV.coolEnd - Date.now() / 1000);
 
 // ---------- запити ----------
@@ -429,7 +429,7 @@ function invTick(dt = .016) {
   if (st.st === 'lobby') {
     const left = Math.max(0, st.begin - now);
     setFill(b.querySelector('.ivl-lobby i'), 1 - left / INVEST.lobby);
-    setText(b.querySelector('.ivl-clock b'), fmtT(left));
+    setText(b.querySelector('.ivclock b'), fmtT(left));
     return;
   }
   const left = Math.max(0, st.r_ends - now);
@@ -508,99 +508,104 @@ function invHTML(C, my) {
 // --- немає переговорів: правила, нагороди й кнопка директора ---
 function invIdleHTML(I, C, my) {
   const cool = invCool(), can = my >= 4, ok = I.day_ok && cool <= 0;
-  let h = `<div class="inv-hero"><div class="inv-hero-art"><img class="ih-main" src="${CSRC('ic_9')}" alt=""><img class="ih-s a" src="${CSRC('ic_4')}" alt=""><img class="ih-s b" src="${CSRC('ic_2')}" alt=""></div>
-      <div class="ih-txt"><b>${tr('Інвестори в корпорацію')}</b><p>${tr('Переговори — командна подія. Інвестори ставлять питання, а вагу вашої відповіді визначає виручка за годину: чим багатша вежа, тим легше переконати інвестора.')}</p></div></div>
-    <div class="inv-when ${ok ? 'on' : ''}"><img src="${CSRC('ic_7')}" alt="">
-      <div class="grow"><b>${tr('Дні переговорів')}: ${invDaysTxt()}</b>
-        <small>${I.day_ok ? (cool > 0 ? `${tr('Наступні переговори через')} <b class="inv-cool">${fmtT(cool)}</b>` : tr('Сьогодні переговори доступні'))
-                          : `${tr('Сьогодні вихідний в інвесторів. Найближчий день')}: ${tr(invDayName(I.next_dow || 1))}`}</small></div></div>`;
+  const status = ok ? ['on', tr('Інвестори готові до зустрічі')]
+    : I.day_ok ? ['wait', `${tr('Наступні переговори через')} <b class="inv-cool">${fmtT(cool)}</b>`]
+    : ['off', `${tr('Вихідний в інвесторів')} · ${tr('далі')} ${tr(invDayName(I.next_dow || 1))}`];
 
-  h += `<div class="pst inv-pst">${tr('Режими й нагороди')}</div><div class="inv-modes">` + INVEST.modes.map(m => {
-    const sel = INV.pick === m.id;
-    return `<div class="invm ${sel ? 'on' : ''} ${can ? 'pick' : ''}" style="--mc:${m.color}" ${can ? `data-a="invmode" data-v="${m.id}"` : ''}>
-      <div class="invm-h"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr(m.name)}</b>
-        <small><b class="invm-dur">${invDur(m)}</b> · ${m.rounds} ${tr('питань')} ${tr('по')} ${m.sec} ${tr('с')}</small></div>${sel && can ? '<i class="invm-ok">✓</i>' : ''}</div>
-      <div class="invm-rw"><div><small>${tr('Корпорації')}</small><span><img src="${IMG(BUCK)}">${fmt(m.corp.bucks)}</span><span><img src="${IMG(COIN)}">${fmt(m.corp.per * C.lvl)}</span><span><img src="${IMG('star3')}">${fmt(m.corp.per * C.lvl)}</span></div>
-        <div><small>${tr('Учаснику')}</small><span><img src="${IMG(BUCK)}">${m.me}</span></div></div>
-      <div class="invm-rev"><img src="${CSRC('ic_4')}" alt="">${tr('Виручка/год для повного бонусу')}: <b>${fmt(invRevNeed(m, C.lvl))}</b></div></div>`;
+  let h = `<div class="ivhero">
+      <div class="ivhero-art"><i class="ivh-glow"></i><img class="ivh-main" src="${CSRC('ic_9')}" alt="">
+        <img class="ivh-s a" src="${CSRC('ic_4')}" alt=""><img class="ivh-s b" src="${CSRC('ic_2')}" alt=""></div>
+      <b class="ivhero-t">${tr('Інвестори')}</b>
+      <p class="ivhero-p">${tr('Заповніть шкалу на 100% за відведений час — і корпорація отримає внесок.')}</p>
+      <div class="ivdays">${INVEST.days.map(d => `<span>${tr(invDayName(d)).slice(0, 2)}</span>`).join('')}</div>
+    </div>
+    <div class="ivstatus ${status[0]}"><i></i><span>${status[1]}</span></div>`;
+
+  h += `<div class="ivsec">${tr('Обери режим')}</div><div class="ivmodes">` + INVEST.modes.map(m => {
+    const sel = INV.pick === m.id, L = C.lvl;
+    return `<button class="ivm ${sel ? 'on' : ''}" style="--mc:${m.color}" ${can ? `data-a="invmode" data-v="${m.id}"` : 'disabled'}>
+      <div class="ivm-top"><img src="${CSRC(m.icon)}" alt=""><b>${tr(m.name)}</b><em>${invDur(m)}</em></div>
+      <div class="ivm-rw"><span><img src="${IMG(BUCK)}">${fmt(m.corp.bucks)}</span><span><img src="${IMG(COIN)}">${fmt(m.corp.per * L)}</span>
+        <span><img src="${IMG('star3')}">${fmt(m.corp.per * L)}</span><span class="me"><img src="${IMG(BUCK)}">${m.me}</span></div>
+      <div class="ivm-rev"><img src="${CSRC('ic_4')}" alt="">${fmt(invRevNeed(m, L))}<small>${tr('виручка/год')}</small></div>
+      ${sel ? '<i class="ivm-tick">✓</i>' : ''}</button>`;
   }).join('') + '</div>';
 
-  if (can) {
-    h += `<button class="btn gold shine wide inv-start" data-a="invgo" ${ok ? '' : 'disabled'}><img src="${CSRC('ic_3')}" class="ib">${ok ? tr('Почати переговори') : I.day_ok ? tr('Ще рано') : tr('Сьогодні інвестори не приймають')}</button>
-      <div class="note small">${tr('Після початку всі учасники отримають сповіщення й матимуть 5 хвилин, щоб приєднатися.')}</div>`;
-  } else {
-    h += `<div class="note small">${tr('Призначити переговори може лише Директор корпорації. Стеж за сповіщенням — на збір дається 5 хвилин.')}</div>`;
-  }
-  h += `<div class="pst inv-pst">${tr('Як рахується прогрес')}</div><div class="inv-how">
-    <div><img src="${CSRC('ic_7')}" alt=""><span>${tr('Кожна правильна відповідь дає очки команді. Неправильна не дає нічого — але й не віднімає.')}</span></div>
-    <div><img src="${CSRC('ic_4')}" alt=""><span>${tr('Виручка за годину фіксується в мить, коли ти приєднуєшся. Якщо потім вона впаде — на переговори це вже не вплине.')}</span></div>
-    <div><img src="${CSRC('ic_8')}" alt=""><span>${tr('У розрахунок ідуть лише ті, хто відповідає. Хто зайшов і мовчить — команді не шкодить, але й нагороди не отримає.')}</span></div>
-    <div><img src="${IMG(BUCK)}" alt=""><span>${tr('Персональні банкноти отримує кожен, хто дав команді щонайменше 1% прогресу.')}</span></div></div>`;
+  if (can) h += `<button class="btn gold shine wide ivgo" data-a="invgo" ${ok ? '' : 'disabled'}>
+      <img src="${CSRC('ic_3')}" class="ib">${ok ? tr('Почати переговори') : I.day_ok ? tr('Ще рано') : tr('Сьогодні зачинено')}</button>
+    <div class="ivhint">${tr('Усім прийде сповіщення · на збір 5 хвилин · раз на добу')}</div>`;
+  else h += `<div class="ivhint">${tr('Переговори призначає Директор. Стеж за сповіщенням — на збір 5 хвилин.')}</div>`;
+
+  h += `<div class="ivsec">${tr('Коротко')}</div><div class="ivrules">
+    ${[['ic_7', 'Правильна відповідь', 'дає очки команді'], ['ic_4', 'Виручка/год', 'фіксується на вході'],
+       ['ic_8', 'Рахуються ті', 'хто відповідає'], [BUCK, 'Від 1% внеску', 'банкноти тобі', 1]]
+      .map(([ic, a2, b2, main]) => `<div class="ivr"><img src="${main ? IMG(ic) : CSRC(ic)}" alt=""><b>${tr(a2)}</b><small>${tr(b2)}</small></div>`).join('')}</div>
+    <div class="ivhint warn">${tr('Банкноти учасникам нараховуються лише за успішні переговори.')}</div>`;
   if (INV.last) h += invLastHTML(INV.last);
   return h;
 }
 
 function invLastHTML(R) {
   const m = invMode(R.mode);
-  return `<div class="pst inv-pst">${tr('Минулі переговори')}</div>
-    <div class="inv-last ${R.ok ? 'ok' : 'no'}"><div class="il-h"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr(m.name)} · ${R.pct}%</b>
-        <small>${R.ok ? tr('Успішно — нагорода в бюджеті') : tr('Не вистачило прогресу')}</small></div><em>${R.ok ? '✓' : '✕'}</em></div>
-      <div class="il-p">${(R.parts || []).map(p => `<span class="${p.share >= INVEST.minShare ? 'pay' : ''}">${nk(p.nick)} <b>${p.share}%</b></span>`).join('') || tr('Учасників не було')}</div></div>`;
+  return `<div class="ivsec">${tr('Минулі переговори')}</div>
+    <div class="ivlast ${R.ok ? 'ok' : 'no'}"><div class="ivl-h"><img src="${CSRC(m.icon)}" alt="">
+        <div><b>${tr(m.name)}</b><small>${R.ok ? tr('Успішно') : tr('Не вистачило')}</small></div><em>${R.pct}%</em></div>
+      <div class="ivl-p">${(R.parts || []).map(p => `<span class="${p.share >= INVEST.minShare ? 'pay' : ''}">${nk(p.nick)} <b>${p.share}%</b></span>`).join('') || tr('Учасників не було')}</div></div>`;
 }
 
 // --- збір учасників ---
 function invLobbyHTML(st, C) {
   const m = invMode(st.mode), mine = st.me || {}, myRev = invMyRev();
   const bonus = Math.min(1, myRev / Math.max(1, invRevNeed(m, st.lvl)));
-  let h = `<div class="inv-live lobby" style="--mc:${m.color}">
-    <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Інвестори вже в дорозі')}</b><small>${tr(m.name)} · ${invDur(m)} · ${st.rounds} ${tr('питань')}</small></div></div>
-    <div class="ivl-clock"><span>${tr('Початок через')}</span><b>${fmtT(Math.max(0, st.begin - Date.now() / 1000))}</b></div>
-    <div class="ivbar ivl-lobby"><i></i></div></div>`;
-  if (mine.in) {
-    h += `<div class="inv-me ok"><img src="${CSRC('ic_4')}" alt=""><div class="grow"><b>${tr('Ти в переговорній')}</b>
-        <small>${tr('Зафіксована виручка/год')}: <b>${fmt(mine.rev)}</b> · ${tr('вага відповіді')} <b>×${mine.mul}</b></small></div></div>`;
-  } else {
-    h += `<div class="inv-me"><img src="${CSRC('ic_4')}" alt=""><div class="grow"><b>${tr('Твоя виручка/год зараз')}: ${fmt(myRev)}</b>
-        <small>${tr('Вага відповіді буде')} <b>×${(1 + bonus).toFixed(2)}</b> ${tr('з')} ×2 ${tr('максимум')}</small></div></div>
-      <button class="btn green shine wide" data-a="invjoin"><img src="${CSRC('ic_3')}" class="ib">${tr('Приєднатися до переговорів')}</button>`;
-  }
-  h += `<div class="pst inv-pst">${tr('Зібралися')} · ${(st.parts || []).length}/${C.members.length}</div><div class="inv-parts">` +
-    (st.parts || []).map(p => `<div class="ivp"><span class="fav pl-av" data-a="pl" data-v="${p.id}">${avHTML((C.members.find(x => x.id === p.id) || {}).avatar)}</span>
-      <div class="grow"><b>${nk(p.nick)}</b><small><img src="${CSRC('ic_4')}">${fmt(p.rev)}</small></div><em>×${p.mul}</em></div>`).join('') +
-    (st.parts && st.parts.length ? '' : `<div class="note small">${tr('Поки нікого — заходьте!')}</div>`) + '</div>';
-  h += `<div class="note small">${tr('Хто не встигне до першого питання — у переговорах не бере участі й нагороди не отримує.')}</div>`;
+  let h = `<div class="ivlive lobby" style="--mc:${m.color}">
+      <div class="ivlive-tag"><img src="${CSRC(m.icon)}" alt="">${tr(m.name)} · ${invDur(m)}</div>
+      <div class="ivlive-t">${tr('Інвестори вже в дорозі')}</div>
+      <div class="ivclock"><b>${fmtT(Math.max(0, st.begin - Date.now() / 1000))}</b><small>${tr('до початку')}</small></div>
+      <div class="ivbar ivl-lobby"><i></i></div></div>`;
+  h += mine.in
+    ? `<div class="ivme ok"><img src="${CSRC('ic_4')}" alt=""><b>${tr('Ти в переговорній')}</b>
+        <small>${tr('Виручка/год')} <b>${fmt(mine.rev)}</b> · ${tr('вага')} <b>×${mine.mul}</b></small></div>`
+    : `<div class="ivme"><img src="${CSRC('ic_4')}" alt=""><b>${tr('Твоя виручка/год')}: ${fmt(myRev)}</b>
+        <small>${tr('вага відповіді')} <b>×${(1 + bonus).toFixed(2)}</b> ${tr('з')} ×2</small></div>
+      <button class="btn green shine wide ivgo" data-a="invjoin"><img src="${CSRC('ic_3')}" class="ib">${tr('Приєднатися')}</button>`;
+  h += `<div class="ivsec">${tr('Зібралися')} · ${(st.parts || []).length}/${C.members.length}</div>` + invPartsHTML(st, C);
+  h += `<div class="ivhint">${tr('Хто не встигне до першого питання — участі не бере.')}</div>`;
   return h;
 }
+
+const invPartsHTML = (st, C) => `<div class="ivparts">` + (st.parts || []).map(p =>
+  `<div class="ivp"><span class="fav pl-av" data-a="pl" data-v="${p.id}">${avHTML((C.members.find(x => x.id === p.id) || {}).avatar)}</span>
+    <b>${nk(p.nick)}</b><small>${st.st === 'lobby' ? fmt(p.rev) : p.nn + ' ' + tr('влучних')}</small><em>${st.st === 'lobby' ? '×' + p.mul : p.share + '%'}</em></div>`).join('')
+  + (st.parts && st.parts.length ? '' : `<div class="ivhint">${tr('Поки нікого — заходьте!')}</div>`) + '</div>';
 
 // --- самі переговори ---
 function invRunHTML(st, C) {
   const m = invMode(st.mode), left = Math.max(0, st.r_ends - Date.now() / 1000), mine = st.me || {};
-  let h = `<div class="inv-live run" style="--mc:${m.color}">
-    <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Переговори')} · ${tr(m.name)}</b>
-      <small>${tr('Питання')} ${Math.min(st.round + 1, st.rounds)} ${tr('з')} ${st.rounds}</small></div><em class="ivl-sec">${Math.ceil(left)}</em></div>
-    <div class="ivbar big ivl-prog"><i></i><span></span></div>
-    <div class="ivbar thin ivl-tick"><i></i></div></div>`;
+  let h = `<div class="ivlive run" style="--mc:${m.color}">
+      <div class="ivlive-tag"><img src="${CSRC(m.icon)}" alt="">${tr(m.name)}</div>
+      <div class="ivgoal"><em class="ivl-sec">${Math.ceil(left)}</em>
+        <div class="ivbar big ivl-prog"><i></i><span></span></div></div>
+      <div class="ivbar thin ivl-tick"><i></i></div>
+      <div class="ivlive-sub">${tr('Залишилось')}: <b data-end="${st.ends}">${fmtT(Math.max(0, st.ends - Date.now() / 1000))}</b></div></div>`;
 
   if (!mine.in) {
-    h += `<div class="inv-me no"><img src="${CSRC('ic_7')}" alt=""><div class="grow"><b>${tr('Ти не встиг на збір')}</b><small>${tr('Можна лише спостерігати. Наступного разу приєднуйся за 5 хвилин до початку.')}</small></div></div>`;
+    h += `<div class="ivme no"><img src="${CSRC('ic_7')}" alt=""><b>${tr('Ти не встиг на збір')}</b><small>${tr('Можна лише спостерігати.')}</small></div>`;
   } else if (st.q) {
     const Q = invQ(st.mode, st.q.i), ord = st.q.ord || [0, 1, 2, 3];
     const hint = INV.hint && INV.hint.round === st.round ? INV.hint : null;
     const answered = mine.done || INV.sent === st.round + 1;
-    h += `<div class="inv-q"><div class="ivq-who"><img src="${CSRC('ic_9')}" alt=""><span>${tr('Інвестор запитує')}</span></div>
+    h += `<div class="ivq"><div class="ivq-who"><img src="${CSRC('ic_9')}" alt=""><span>${tr('Інвестор запитує')}</span></div>
       <div class="ivq-t">${esc(invTxt(Q[0]))}</div>
       <div class="ivq-opts">` + ord.map((orig, j) => {
-        const cls = hint ? (j === hint.right ? 'right' : (j === hint.pick ? 'wrong' : '')) : '';
+        const cls = hint ? (j === hint.right ? 'right' : (j === hint.pick ? 'wrong' : 'dim')) : '';
         return `<button class="ivo ${cls} ${answered ? 'lock' : ''}" ${answered ? 'disabled' : `data-a="invans" data-v="${j}"`}><i>${'ABCD'[j]}</i><span>${esc(invTxt(Q[1][orig]))}</span></button>`;
       }).join('') + `</div>
-      ${answered ? `<div class="ivq-wait">${hint ? (hint.hit ? `<b class="ok">✓ ${tr('Інвестор задоволений')}</b> +${hint.gain}` : `<b class="no">✕ ${tr('Інвестор хитає головою')}</b>`) : tr('Відповідь прийнято')} · ${tr('чекаємо наступне питання')}</div>` : ''}</div>`;
+      ${answered ? `<div class="ivq-wait">${hint ? (hint.hit ? `<b class="ok">✓ ${tr('Інвестор задоволений')}</b>` : `<b class="no">✕ ${tr('Інвестор хитає головою')}</b>`) : tr('Відповідь прийнято')}</div>` : ''}</div>`;
   }
-  h += `<div class="inv-sum"><div><img src="${CSRC('ic_14')}"><b>${mine.in ? mine.nn : 0}</b><small>${tr('влучних')}</small></div>
-      <div><img src="${CSRC('ic_4')}"><b>×${mine.in ? mine.mul : '—'}</b><small>${tr('вага')}</small></div>
-      <div><img src="${CSRC('ic_13')}"><b>${mine.in ? mine.share : 0}%</b><small>${tr('твій внесок')}</small></div></div>`;
-  h += `<div class="pst inv-pst">${tr('Команда')}</div><div class="inv-parts">` + (st.parts || []).map(p =>
-    `<div class="ivp"><span class="fav pl-av">${avHTML((C.members.find(x => x.id === p.id) || {}).avatar)}</span>
-      <div class="grow"><b>${nk(p.nick)}</b><small>${p.nn} ${tr('влучних')} · ×${p.mul}</small></div><em>${p.share}%</em></div>`).join('') + '</div>';
+  h += `<div class="ivsum">${[[CSRC('ic_14'), mine.in ? mine.nn : 0, 'влучних'], [CSRC('ic_4'), '×' + (mine.in ? mine.mul : '—'), 'вага'],
+      [CSRC('ic_13'), (mine.in ? mine.share : 0) + '%', 'твій внесок']]
+      .map(([i2, v, t2]) => `<div><img src="${i2}" alt=""><b>${v}</b><small>${tr(t2)}</small></div>`).join('')}</div>`;
+  h += `<div class="ivsec">${tr('Команда')}</div>` + invPartsHTML(st, C);
   return h;
 }
 
@@ -610,7 +615,7 @@ const invActions = {
   invgo: () => {
     const m = invMode(INV.pick);
     confirmBox({ icon: 'bz_office', title: tr('Почати переговори?'), cls: 'green', yes: tr('Запросити інвесторів'), back: () => openCorp('inv'),
-      text: `<b>${tr(m.name)}</b> · ${invDur(m)}<br>${m.rounds} ${tr('питань')} ${tr('по')} ${m.sec} ${tr('с')}<br><br>${tr('Усім учасникам прийде сповіщення. На збір — 5 хвилин. Наступні переговори — тільки через 24 години.')}` },
+      text: `<b>${tr(m.name)}</b> · ${invDur(m)}<br>${tr('Треба набрати 100% за цей час')}<br><br>${tr('Усім учасникам прийде сповіщення. На збір — 5 хвилин. Наступні переговори — тільки через 24 години.')}` },
       async () => {
         const r = await api('corp_inv_start', { mode: INV.pick });
         if (!r.ok) return toast(cErr(r.error), 'bz_office', true);

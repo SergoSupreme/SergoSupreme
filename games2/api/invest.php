@@ -24,14 +24,18 @@ const INV_COOLDOWN = 24 * 3600;      // одні переговори на до�
 const INV_MIN_SHARE = 1.0;           // % прогресу команди для персональної нагороди
 const INV_TZ = 'Europe/Kyiv';
 const INV_GRACE = 3;                 // секунди запасу на мережу при відповіді
-// rounds x sec — уся тривалість переговорів: 5 хв / 3 хв / 1 хв 40 с
-// id => [питань, секунд на питання, складність k, виручка для повного бонусу,
+// Головне — встигнути набрати 100% за відведений час, а не відповісти на певну кількість питань.
+// dur — уся тривалість переговорів, sec — скільки секунд на одне питання; питання йдуть по колу до кінця часу.
+// id => [тривалість, секунд на питання, складність k, виручка для повного бонусу,
 //        банкноти корпорації, монети й досвід за рівень, банкноти учаснику]
 const INV_MODES = [
-  'easy' => ['rounds' => 15, 'sec' => 20, 'k' => 1.00, 'rev' => 165000,  'bucks' => 500,  'per' => 45000,  'me' => 100],
-  'norm' => ['rounds' => 12, 'sec' => 15, 'k' => 1.25, 'rev' => 530000,  'bucks' => 1800, 'per' => 85000,  'me' => 150],
-  'hard' => ['rounds' => 10, 'sec' => 10, 'k' => 1.50, 'rev' => 1320000, 'bucks' => 4000, 'per' => 200000, 'me' => 250],
+  'easy' => ['dur' => 300, 'sec' => 20, 'k' => 1.00, 'rev' => 165000,  'bucks' => 500,  'per' => 45000,  'me' => 100],
+  'norm' => ['dur' => 180, 'sec' => 15, 'k' => 1.25, 'rev' => 530000,  'bucks' => 1800, 'per' => 85000,  'me' => 150],
+  'hard' => ['dur' => 100, 'sec' => 10, 'k' => 1.50, 'rev' => 1320000, 'bucks' => 4000, 'per' => 200000, 'me' => 250],
 ];
+// скільки питань устигне прозвучати за цей час
+function invRounds(string $m): int { $c = invModeCfg($m); return max(1, intdiv($c['dur'], $c['sec'])); }
+function invDur(string $m): int { return invModeCfg($m)['dur']; }
 // Правильні відповіді. Порядок збігається з INVEST.q у data.js; у гру ці числа не потрапляють.
 const INV_ANS = [
   'easy' => [0,2,1,1,2,0,1,2,2,2,0,2,0,2,3,0,2,3,0,1,2,2,0,3],
@@ -62,14 +66,15 @@ function invRound(array $inv): int {
   if (time() < $begin) return -1;
   return intdiv(time() - $begin, invSec((string)$inv['mode']));
 }
-function invEnded(array $inv): bool { return (int)$inv['state'] === 2 || invRound($inv) >= invModeCfg((string)$inv['mode'])['rounds']; }
+function invEnded(array $inv): bool { return (int)$inv['state'] === 2 || time() >= (int)$inv['begin_at'] + invDur((string)$inv['mode']); }
 function invActive(int $cid): ?array { $r = q('SELECT * FROM corp_invest WHERE corp_id = ? AND state < 2 ORDER BY id DESC LIMIT 1', [$cid])->fetch(); return $r ?: null; }
 // Питання раунду: id питання та порядок варіантів — з насіння переговорів, однаково для всіх учасників
 function invPlan(array $inv): array {
-  $mode = (string)$inv['mode']; $n = invModeCfg($mode)['rounds']; $total = invQCount($mode);
+  $mode = (string)$inv['mode']; $n = invRounds($mode); $total = invQCount($mode);
   mt_srand((int)$inv['seed']);
   $pool = range(0, $total - 1);
   for ($i = $total - 1; $i > 0; $i--) { $j = mt_rand(0, $i); [$pool[$i], $pool[$j]] = [$pool[$j], $pool[$i]]; }
+  while (count($pool) < $n) $pool = array_merge($pool, $pool);   // часу більше, ніж питань — пускаємо по колу
   $plan = [];
   foreach (array_slice($pool, 0, $n) as $qi) {
     $ord = [0, 1, 2, 3];
@@ -88,7 +93,7 @@ function invActiveCount(array $parts): int {
 }
 function invNeed(array $inv, int $parts): float {
   $m = invModeCfg((string)$inv['mode']);
-  return max(1.0, $m['rounds'] * max(1, $parts) * $m['k']);
+  return max(1.0, invRounds((string)$inv['mode']) * max(1, $parts) * $m['k']);
 }
 // Коротка картка для серця гри (beat) і для списку
 function invBrief(?array $inv): ?array {
@@ -96,7 +101,7 @@ function invBrief(?array $inv): ?array {
   $m = invModeCfg((string)$inv['mode']); $r = invRound($inv);
   return ['id' => (int)$inv['id'], 'mode' => (string)$inv['mode'],
     'st' => $r < 0 ? 'lobby' : 'run', 'begin' => (int)$inv['begin_at'],
-    'ends' => (int)$inv['begin_at'] + $m['rounds'] * invSec((string)$inv['mode']),
+    'ends' => (int)$inv['begin_at'] + invDur((string)$inv['mode']),
     'n' => (int)q('SELECT COUNT(*) FROM corp_invest_p WHERE inv_id = ?', [(int)$inv['id']])->fetchColumn()];
 }
 
@@ -110,10 +115,10 @@ function invState(array $inv, int $pid): array {
   $score = 0.0; $mine = null;
   foreach ($parts as $p) { $score += (float)$p['score']; if ((int)$p['player_id'] === $pid) $mine = $p; }
   $plan = invPlan($inv);
-  $st = $r < 0 ? 'lobby' : ($r >= $m['rounds'] ? 'done' : 'run');
+  $rounds = invRounds($mode); $st = $r < 0 ? 'lobby' : (invEnded($inv) ? 'done' : 'run');
   $o = ['id' => (int)$inv['id'], 'mode' => $mode, 'lvl' => (int)$inv['lvl'],
-    'st' => $st, 'begin' => $begin, 'round' => $r, 'rounds' => $m['rounds'], 'sec' => $sec,
-    'r_ends' => $begin + ($r + 1) * $sec, 'ends' => $begin + $m['rounds'] * $sec,
+    'st' => $st, 'begin' => $begin, 'round' => $r, 'rounds' => $rounds, 'sec' => $sec,
+    'r_ends' => min($begin + ($r + 1) * $sec, $begin + invDur($mode)), 'ends' => $begin + invDur($mode), 'dur' => invDur($mode),
     'need' => round($need, 2), 'score' => round($score, 2), 'pct' => round($need > 0 ? $score / $need * 100 : 0, 1),
     'starter' => (int)$inv['starter_id'], 'now' => time(),
     'qs' => array_map(fn($x) => (int)$x['q'], $plan),
@@ -140,15 +145,15 @@ function invFinish(int $id): ?array {
   $score = 0.0; foreach ($parts as $p) $score += (float)$p['score'];
   $pct = $need > 0 ? $score / $need * 100 : 0;
   $ok = $pct >= 100 ? 1 : 0;
-  // персональні нагороди — усім, хто дав команді хоча б 1% прогресу
+  // персональні нагороди — лише за успішні переговори і лише тим, хто дав команді хоча б 1% прогресу
   $paid = 0;
   foreach ($parts as $p) {
     $share = $need > 0 ? (float)$p['score'] / $need * 100 : 0;
     q('UPDATE corp_invest_p SET share = ? WHERE id = ?', [$share, (int)$p['id']]);
-    if ($share + 1e-9 < INV_MIN_SHARE) continue;
+    if (!$ok || $share + 1e-9 < INV_MIN_SHARE) continue;
     $paid++;
     mailReward((int)$p['player_id'], 'Переговори з інвесторами',
-      ($ok ? 'Інвестори задоволені!' : 'Інвестори пішли думати.') . ' Твій внесок у переговори — ' . number_format($share, 1, ',', ' ') . '%. Нагорода за участь:',
+      'Інвестори задоволені! Твій внесок у переговори — ' . number_format($share, 1, ',', ' ') . '%. Нагорода:',
       [['kind' => 'bucks', 'n' => $m['me']]]);
   }
   // нагорода корпорації — лише за успішні переговори
@@ -251,8 +256,8 @@ function invDispatch(string $a, int $pid, array $me) {
     case 'corp_inv_answer': {
       $c = needCorp($pid); $cid = (int)$c['corp_id'];
       $inv = invActive($cid); if (!$inv) fail('inv_none');
-      $r = invRound($inv); $m = invModeCfg((string)$inv['mode']);
-      if ($r < 0 || $r >= $m['rounds']) fail('inv_over');
+      $r = invRound($inv);
+      if ($r < 0 || invEnded($inv)) fail('inv_over');
       // відповідь мусить стосуватися того самого питання, яке гравець бачив: інакше через затримку
       // мережі вона зарахувалася б наступному питанню, якого він ще не читав
       $sawRound = (int)arg('round', $r);

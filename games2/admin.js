@@ -83,9 +83,9 @@ function admChartsWire(root) {
 const dLabel = d => { const [y, m, dd] = d.split('-'); return `${dd}.${m}`; };
 
 // ---------- каркас ----------
-const ADM_DESC = { home: 'статистика й графіки', online: 'хто зараз у грі', players: 'пошук і керування', don: 'заявки й оплати', gifts: 'подарунки гравців', give: 'роздачі в пошту', codes: 'бонус-коди для гравців', promos: 'знижки й бонуси', news: 'новини для всіх', chat: 'модерація чату', push: 'сповіщення на телефон', server: 'сервер і база', log: 'дії адміністраторів' };
+const ADM_DESC = { home: 'статистика й графіки', online: 'хто зараз у грі', players: 'пошук і керування', corps: 'бюджети, споруди, учасники', don: 'заявки й оплати', gifts: 'подарунки гравців', give: 'роздачі в пошту', codes: 'бонус-коди для гравців', promos: 'знижки й бонуси', news: 'новини для всіх', chat: 'модерація чату', push: 'сповіщення на телефон', server: 'сервер і база', log: 'дії адміністраторів' };
 ADM.badge = {};
-const ADM_TABS = [['home', 'Огляд', 'chart'], ['online', 'Онлайн', 'phone'], ['players', 'Гравці', 'friends'], ['don', 'Донат', 'don_3'], ['gifts', 'Дарунки', 'giftbox'], ['give', 'Роздачі', 'gift_red'], ['codes', 'Коди', 'keys'], ['promos', 'Акції', 'fireworks'], ['news', 'Новини', 'megaphone2'], ['chat', 'Чат', 'chat'], ['push', 'Пуші', 'bell'], ['server', 'Сервіс', 'gear'], ['log', 'Журнал', 'clipboard']];
+const ADM_TABS = [['home', 'Огляд', 'chart'], ['online', 'Онлайн', 'phone'], ['players', 'Гравці', 'friends'], ['corps', 'Корпорації', 'bz_office'], ['don', 'Донат', 'don_3'], ['gifts', 'Дарунки', 'giftbox'], ['give', 'Роздачі', 'gift_red'], ['codes', 'Коди', 'keys'], ['promos', 'Акції', 'fireworks'], ['news', 'Новини', 'megaphone2'], ['chat', 'Чат', 'chat'], ['push', 'Пуші', 'bell'], ['server', 'Сервіс', 'gear'], ['log', 'Журнал', 'clipboard']];
 function openAdmin(tab) {
   if (!isAdmin()) return toast('Немає доступу', 'lock', true);
   if (!NET.online) return toast(netErr('offline'), 'lock', true);
@@ -133,6 +133,7 @@ async function admRender() {
     if (tab === 'players') html = view ? await admPlayer(view) : await admPlayers();
     if (tab === 'give') html = await admGive();
     if (tab === 'codes') html = await admCodes();
+    if (tab === 'corps') html = view ? await admCorp(view) : await admCorps();
     if (tab === 'promos') html = await admPromos(view);
     if (tab === 'news') html = await admNews(view);
     if (tab === 'chat') html = await admChat();
@@ -320,6 +321,69 @@ async function admGive() {
     <label class="adm-sw"><input type="checkbox" id="gv-push" checked><i></i><span>🔔 Надіслати пуш-сповіщення на телефони</span></label>
     <button class="adm-b gold wide" data-act="give">Надіслати в пошту</button></section>
     <section class="adm-card">${aHead('clipboard', 'Останні роздачі')}${(r.items || []).map(g => { const rw = JSON.parse(g.reward || '[]'); const list = Array.isArray(rw) ? rw : [rw]; return `<div class="adm-row static"><img class="ri" src="${IMG('gift_red')}"><div class="grow"><b>${esc(g.title)}</b><small>${g.nick ? 'для ' + esc(g.nick) : 'усім'} · ${aAgo(g.t)} · забрали: ${g.claims}</small><div class="rchips">${rewChips(list)}</div></div></div>`; }).join('') || aEmpty('gift_red', 'Роздач ще не було')}</section>`;
+}
+
+// ---------- Корпорації ----------
+const CORP_BLD_N = { rev: ['Бізнес-центр', 'bld_5'], xp: ['Академія', 'bld_9'], liftxp: ['Транспортна вежа', 'bld_3'],
+  liftrev: ['Корпоративний банк', 'bld_7'], lobby: ['Гранд-лобі', 'bld_8'], tips: ['Готель-люкс', 'bld_2'] };
+const CSRC2 = n => (window.SPRITES && SPRITES['c_' + n]) || 'images/corp/' + n + '.png';
+async function admCorps() {
+  const r = await aApi('adm_corps', { q: ADM.q || '', page: ADM.page || 0 });
+  const list = r.items || [], pages = Math.ceil((r.total || 0) / (r.per || 20));
+  return `<section class="adm-card">${aHead('bz_office', 'Корпорації', (r.total || 0) + ' всього')}
+      <div class="adm-search"><input id="ac-q" placeholder="Назва або ID" value="${esc(ADM.q || '')}"><button class="adm-b" data-act="csearch">Знайти</button></div></section>
+    <section class="adm-card">${list.map(c => `<div class="adm-row corp-row" data-corp="${c.id}">
+        <img class="ri cemb" src="${CSRC2(c.emblem)}" alt="">
+        <div class="grow"><b>${esc(c.name)}</b><small>рівень ${c.lvl} · ${c.members} учасник(ів) · директор: ${esc(c.director || '—')}</small>
+          <div class="rchips"><span class="rchip"><img src="${IMG(BUCK)}">${aFmt(c.bucks)}</span><span class="rchip"><img src="${IMG('coins_heap')}">${aFmt(c.coins)}</span>
+            <span class="rchip"><img src="${IMG('star3')}">${aFmt(c.xp)}</span></div></div>
+        <i class="chev"></i></div>`).join('') || aEmpty('bz_office', 'Корпорацій ще немає')}</section>
+    ${aPager(ADM.page || 0, pages, 'corps')}`;
+}
+async function admCorp(id) {
+  const r = await aApi('adm_corp', { id: +id });
+  if (!r.ok) return aEmpty('bz_office', 'Корпорацію не знайдено');
+  const C = ADM.cache.corp = r.corp, M = r.members || [], roles = r.roles || [];
+  const xpPct = Math.min(100, C.need ? C.xp / C.need * 100 : 0);
+  return `<button class="adm-back" data-cback>‹ До списку корпорацій</button>
+    <section class="adm-card glow">${aHead('bz_office', esc(C.name), 'рівень ' + C.lvl + ' · ' + M.length + '/' + C.cap + ' учасників')}
+      <div class="adm-corp-top"><img class="cemb big" src="${CSRC2(C.emblem)}" alt="">
+        <div class="grow"><div class="adm-xp"><i style="width:${xpPct}%"></i><span>${aFmt(C.xp)} / ${aFmt(C.need)} XP</span></div>
+          <small class="adm-hint">Створено ${aDT(C.created)} · завдань виконано ${C.tasks_done} · колекцій ${C.sets}</small></div></div>
+      <div class="adm-grid2">
+        <label class="adm-f"><span>Назва</span><input id="cf-name" maxlength="24" value="${esc(C.name)}"></label>
+        <label class="adm-f"><span>Рівень <small>(1–${C.max})</small></span><input id="cf-lvl" type="number" min="1" max="${C.max}" value="${C.lvl}"></label>
+        <label class="adm-f"><span>Банкноти</span><input id="cf-bucks" type="number" min="0" value="${Math.round(C.bucks)}"></label>
+        <label class="adm-f"><span>Монети</span><input id="cf-coins" type="number" min="0" value="${Math.round(C.coins)}"></label>
+        <label class="adm-f"><span>Досвід</span><input id="cf-xp" type="number" min="0" value="${Math.round(C.xp)}"></label>
+      </div>
+      <div class="adm-f"><span>Споруди <small>(0–${C.bmax})</small></span><div class="adm-blds">
+        ${(r.blds || []).map(k => { const [n, ic] = CORP_BLD_N[k] || [k, 'bld_5'];
+          return `<label class="adm-bld"><img src="${CSRC2(ic)}" alt=""><b>${n}</b>
+            <input type="number" id="cb-${k}" min="0" max="${C.bmax}" value="${C.bld[k] || 0}"></label>`; }).join('')}</div></div>
+      <button class="adm-b gold wide" data-act="corp-save">Зберегти зміни</button></section>
+
+    <section class="adm-card">${aHead('friends', 'Учасники', M.length + ' / ' + C.cap)}
+      ${M.map(m => { const dir = m.id === C.director;
+        return `<div class="adm-row static cmem-row ${dir ? 'dir' : ''}">
+          <img class="ri" src="${IMG('friends')}" alt="">
+          <div class="grow"><b data-player="${m.id}">${esc(m.nick)}</b>
+            <small>${roles[m.role] || m.role} · ${m.level} рівень · внесок ${aFmt(m.d_bucks)} / ${aFmt(m.d_coins)} · досвід ${aFmt(m.xp)}</small></div>
+          <div class="adm-row-act">
+            ${dir ? '<span class="dirtag">Директор</span>' : `<select class="adm-sel" data-crole="${m.id}">${roles.slice(0, 4).map((n, i) => `<option value="${i}" ${i === m.role ? 'selected' : ''}>${n}</option>`).join('')}</select>
+              <button class="adm-b ghost sq" data-act="corp-dir" data-i="${m.id}" title="Зробити Директором">★</button>
+              <button class="adm-b danger sq" data-act="corp-kick" data-i="${m.id}" title="Виключити">✕</button>`}</div></div>`; }).join('') || aEmpty('friends', 'Учасників немає')}</section>
+
+    ${(r.invest || []).length ? `<section class="adm-card">${aHead('bz_office', 'Останні переговори')}
+      ${r.invest.map(i => `<div class="adm-row static"><img class="ri" src="${IMG(i.ok ? 'check' : 'close')}" alt="">
+        <div class="grow"><b>${({ easy: 'Легкий', norm: 'Нормальний', hard: 'Важкий' })[i.mode] || i.mode} · ${Math.round(i.pct)}%</b>
+          <small>${i.ok ? 'успішно' : 'провал'} · ${aAgo(i.t)}</small></div></div>`).join('')}</section>` : ''}
+
+    <section class="adm-card">${aHead('clipboard', 'Журнал корпорації')}
+      ${(r.log || []).map(l => `<div class="adm-row static"><div class="grow"><b>${esc(l.nick || 'Система')}</b><small>${esc(l.kind)} ${esc(String(l.info || '').slice(0, 60))} · ${aAgo(l.t)}</small></div></div>`).join('') || aEmpty('clipboard', 'Журнал порожній')}</section>
+
+    <section class="adm-card danger-zone">${aHead('fire', 'Небезпечна зона', 'дію не можна скасувати')}
+      <button class="adm-b danger wide" data-act="corp-del">Розпустити корпорацію</button></section>`;
 }
 
 // ---------- Бонус-коди ----------
@@ -553,7 +617,7 @@ async function admPush() {
       <details class="adm-det"><summary>Налаштування cron (щохвилини)</summary><small class="adm-hint">Команда: <b>php …/games2/api/cron.php</b> або посилання:<br><code>${esc(location.origin + location.pathname.replace(/[^/]*$/, ''))}api/cron.php?key=${esc(P.cron)}</code></small></details></section>`;
 }
 // ---------- Журнал ----------
-const LOG_N = { edit: 'Редагування', ban: 'Блокування', unban: 'Розблокування', mute: 'Бан чату', unmute: 'Зняв бан', kick: 'Вихід з пристроїв', reset: 'Скидання прогресу', delete: 'Видалення', give: 'Роздача', promo: 'Акція', promo_del: 'Видалив акцію', news: 'Новина', news_del: 'Видалив новину', chat_del: 'Видалив повідомлення', dmban: 'Бан ЛС', gift_del: 'Видалив подарунок', code: 'Бонус-код', code_on: 'Увімкнув код', code_off: 'Вимкнув код', code_del: 'Видалив код', settings: 'Налаштування', cleanup: 'Очищення', push: 'Пуш-сповіщення', tool: 'Інструмент', donate_ok: 'Донат підтверджено', donate_no: 'Донат відхилено' };
+const LOG_N = { edit: 'Редагування', ban: 'Блокування', unban: 'Розблокування', mute: 'Бан чату', unmute: 'Зняв бан', kick: 'Вихід з пристроїв', reset: 'Скидання прогресу', delete: 'Видалення', give: 'Роздача', promo: 'Акція', promo_del: 'Видалив акцію', news: 'Новина', news_del: 'Видалив новину', chat_del: 'Видалив повідомлення', dmban: 'Бан ЛС', gift_del: 'Видалив подарунок', corp_edit: 'Редагування корпорації', corp_member: 'Учасник корпорації', corp_del: 'Розпуск корпорації', code: 'Бонус-код', code_on: 'Увімкнув код', code_off: 'Вимкнув код', code_del: 'Видалив код', settings: 'Налаштування', cleanup: 'Очищення', push: 'Пуш-сповіщення', tool: 'Інструмент', donate_ok: 'Донат підтверджено', donate_no: 'Донат відхилено' };
 const LOG_IC = { edit: '✎', ban: '⛔', unban: '✓', mute: '🔇', unmute: '🔈', dmban: '✉', kick: '⏏', reset: '↺', delete: '🗑', give: '🎁', promo: '🔥', promo_del: '🔥', news: '📢', news_del: '📢', chat_del: '💬', push: '🔔', tool: '🛠', donate_ok: '💵', donate_no: '✕', gift_del: '🎁', cleanup: '🧹', settings: '⚙' };
 ADM.logPage = 0;
 async function admLog() {
@@ -606,7 +670,7 @@ async function admClick(e) {
   if (d.popen !== undefined) { pqSync(); ADM.pq.open = d.popen; document.querySelectorAll('#adm [data-popen]').forEach(b => b.classList.toggle('on', b === t)); return; }
   if (d.plf) { pqSync(); ADM.plf = d.plf; return admRender(); }
   if (d.clean) return admConfirm({ title: 'Очистити дані?', text: d.name || t.textContent, yes: 'Очистити' }, async () => { const r = await aApi('adm_cleanup', { what: d.clean }); if (r.ok) { admToast('Видалено записів: ' + r.n); admRender(); } });
-  if (d.pg) { const [k, n] = d.pg.split(':'); if (k === 'players') ADM.page = +n; if (k === 'log') ADM.logPage = +n; if (k === 'gifts') ADM.giftPage = +n; if (k === 'don') ADM.donPage = +n; return admRender(); }
+  if (d.pg) { const [k, n] = d.pg.split(':'); if (k === 'players' || k === 'corps') ADM.page = +n; if (k === 'log') ADM.logPage = +n; if (k === 'gifts') ADM.giftPage = +n; if (k === 'don') ADM.donPage = +n; return admRender(); }
   if (d.rstep) { const inp = document.querySelector(`#adm [data-rn="${d.rstep}"][data-i="${d.i}"]`); const v = +inp.value || 0, step = v >= 10000 ? 1000 : v >= 1000 ? 100 : v >= 100 ? 10 : 1; inp.value = Math.max(1, v + d.d * step); return; }
   if (d.dst) { ADM.donSt = d.dst; ADM.donPage = 0; return admRender(); }
   if (d.dok || d.dno) { const id = +(d.dok || d.dno), ok = !!d.dok;
@@ -616,6 +680,8 @@ async function admClick(e) {
   if ('navopen' in d) return admNavSheet();
   if (d.tabstep) { const i = ADM_TABS.findIndex(x => x[0] === ADM.tab), n = ADM_TABS.length; return admGo(ADM_TABS[(i + +d.tabstep + n) % n][0]); }
   if (d.gotab) return admGo(d.gotab);
+  if ('cback' in d) { ADM.page = 0; return admGo('corps'); }
+  if (d.corp) return admGo('corps', +d.corp);
   if ('back' in d) return admGo('players');
   if (d.player) return admGo('players', +d.player);
   if (d.promo && !t.closest('.adm-promo.big')) { ADM.newType = d.ptnew || 'discount'; return admGo('promos', d.promo); }
@@ -688,6 +754,29 @@ async function admClick(e) {
     return admConfirm({ title: to ? `Надіслати гравцю ${esc(to)}?` : 'Надіслати ВСІМ гравцям?', text: `<div class="rchips">${rewChips(rw)}</div>`, danger: false, yes: 'Надіслати' },
       async () => { if ((await aApi('adm_give', { to, title, text, rewards: rw, push: document.getElementById('gv-push') && document.getElementById('gv-push').checked ? 1 : 0 })).ok) { admToast('Роздачу надіслано в пошту'); ADM.gv = null; ADM.rw = [{ kind: 'bucks', n: 50 }]; admRender(); } });
   }
+  if (act === 'csearch') { ADM.q = document.getElementById('ac-q').value; ADM.page = 0; return admRender(); }
+  if (act === 'corp-save') {
+    const C = ADM.cache.corp, v = id => document.getElementById(id).value;
+    const bld = {}; Object.keys(CORP_BLD_N).forEach(k => { const e = document.getElementById('cb-' + k); if (e) bld[k] = Math.max(0, +e.value || 0); });
+    const r = await aApi('adm_corp_save', { id: C.id, name: v('cf-name').trim(), lvl: v('cf-lvl'), bucks: v('cf-bucks'), coins: v('cf-coins'), xp: v('cf-xp'), bld });
+    if (r.ok) { admToast(r.changes && r.changes.length ? 'Збережено: ' + r.changes.length + ' змін(и)' : 'Змін немає'); admRender(); }
+    return;
+  }
+  if (act === 'corp-dir') {
+    const C = ADM.cache.corp;
+    return admConfirm({ title: 'Передати посаду Директора?', text: 'Нинішній Директор стане Зам. директора.', danger: false, yes: 'Передати' },
+      async () => { if ((await aApi('adm_corp_member', { id: C.id, pid: +d.i, op: 'director' })).ok) { admToast('Директора змінено'); admRender(); } });
+  }
+  if (act === 'corp-kick') {
+    const C = ADM.cache.corp;
+    return admConfirm({ title: 'Виключити з корпорації?', text: 'Гравець втратить усі бонуси споруд.', yes: 'Виключити' },
+      async () => { if ((await aApi('adm_corp_member', { id: C.id, pid: +d.i, op: 'kick' })).ok) { admToast('Учасника виключено'); admRender(); } });
+  }
+  if (act === 'corp-del') {
+    const C = ADM.cache.corp;
+    return admConfirm({ title: 'Розпустити корпорацію?', text: `Корпорація <b>${esc(C.name)}</b>, її бюджет, споруди й колекції будуть видалені назавжди.`, yes: 'Розпустити' },
+      async () => { if ((await aApi('adm_corp_del', { id: C.id })).ok) { admToast('Корпорацію розпущено'); admGo('corps'); } });
+  }
   if (act === 'code-new') { ADM.cf = codeBlank(); ADM.crw = [{ kind: 'bucks', n: 200 }]; return admRender(); }
   if (act === 'code-copy') { try { await navigator.clipboard.writeText(d.v); admToast('Код скопійовано: ' + d.v); } catch (e) { admToast(d.v); } return; }
   if (act === 'code-edit') {
@@ -720,8 +809,12 @@ document.addEventListener('change', e => {
   if (!e.target.closest || !e.target.closest('#adm')) return;
   const d = e.target.dataset;
   if (e.target.id === 'ap-sort') { ADM.sort = e.target.value; ADM.page = 0; admRender(); }
-  if (d.rk) { const pre = d.rk; if (pre === 'p') promoSync(); else rwSync('g'); const L = pre === 'g' ? ADM.rw : ADM.pf.rw; L[+d.i] = e.target.value === 'chest' ? { kind: 'chest', id: 'purple', n: 1 } : { kind: e.target.value, n: L[+d.i].n || 1 }; if (pre === 'g') admRender(); else document.getElementById('adm-main').innerHTML = admPromoForm(); }
-  if (d.rc) { const pre = d.rc; if (pre === 'p') promoSync(); else rwSync('g'); (pre === 'g' ? ADM.rw : ADM.pf.rw)[+d.i].id = e.target.value; if (pre === 'p') document.getElementById('adm-main').innerHTML = admPromoForm(); }
+  if (d.rk) { const pre = d.rk; if (pre === 'p') promoSync(); else if (pre === 'c') codeSync(); else rwSync('g'); const L = rwList(pre);
+    L[+d.i] = e.target.value === 'chest' ? { kind: 'chest', id: 'purple', n: 1 } : { kind: e.target.value, n: L[+d.i].n || 1 }; rwRepaint(pre); }
+  if (d.rc) { const pre = d.rc; if (pre === 'p') promoSync(); else if (pre === 'c') codeSync(); else rwSync('g'); rwList(pre)[+d.i].id = e.target.value; if (pre !== 'g') rwRepaint(pre); }
+  // звання учасника корпорації
+  if (d.crole) { const C = ADM.cache.corp; if (!C) return;
+    aApi('adm_corp_member', { id: C.id, pid: +d.crole, op: 'role', role: +e.target.value }).then(r => { if (r.ok) admToast('Звання змінено'); }); }
 });
 document.addEventListener('input', e => {
   const id = e.target.id;
