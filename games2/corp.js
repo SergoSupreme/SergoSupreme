@@ -39,7 +39,10 @@ const corpErr = { no_corp: 'Ти не в корпорації', in_corp: 'Ти �
   no_invite: 'Запрошення вже недійсне', corp_gone: 'Корпорацію розпущено', corp_transfer_first: 'Спершу передай посаду Директора іншому учаснику', corp_too_new: 'Поповнювати бюджет можна після 3 днів у корпорації',
   corp_limit_b: 'Денний ліміт банкнот вичерпано', corp_limit_c: 'Денний ліміт монет вичерпано', corp_max: 'Максимальний рівень', corp_budget: 'Недостатньо коштів у бюджеті', coll_incomplete: 'Колекцію ще не зібрано', corp_full: 'У корпорації немає вільних місць', corp_boost_on: 'Бонус уже діє', corp_boost_zero: 'Спершу збудуй споруду',
   task_done: 'Завдання вже виконано', already_claimed: 'Нагороду вже отримано', task_busy: 'Ти вже виконуєш або допомагаєш в іншому завданні', corp_building: 'Споруда вже будується', ctask_have: 'У тебе вже є завдання', ctask_cancel_wait: 'Скасувати завдання можна раз на 3 години',
-  ctask_not_done: 'Завдання ще не виконано', coll_cycle_done: 'Усі колекції циклу вже зібрано', bad_op: 'Помилка запиту' };
+  ctask_not_done: 'Завдання ще не виконано', coll_cycle_done: 'Усі колекції циклу вже зібрано', bad_op: 'Помилка запиту',
+  inv_day: 'Переговори бувають лише в понеділок, вівторок, суботу й неділю', inv_cool: 'Переговори можна проводити раз на 24 години',
+  inv_on: 'Переговори вже тривають', inv_none: 'Зараз переговорів немає', inv_over: 'Переговори вже завершено',
+  inv_late: 'Збір завершено — приєднатися вже не можна', inv_not_in: 'Ти не береш участі в цих переговорах', inv_answered: 'Відповідь уже зараховано' };
 Object.assign(NET_ERR, corpErr);
 const cErr = e => netErr(e);
 let corpTab = 'mem', CORP = null, corpChatT = null, corpChat = [];
@@ -127,7 +130,7 @@ function corpCreate() {
 // ---------- сторінка корпорації ----------
 function corpPage() {
   const C = CORP.corp, me = NET.auth.player.id, my = C.role, nowS = Date.now() / 1000;
-  const tabs = [['mem', 'Учасники', 'ic_8'], ['bld', 'Споруди', 'bld_5'], ['task', 'Завдання', 'ic_14'], ['coll', 'Колекції', 'card_1'], ['bud', 'Бюджет', 'ic_6'], ['chat', 'Чат', 'ic_3'], ['set', 'Налаштування', 'ic_10']];
+  const tabs = [['mem', 'Учасники', 'ic_8'], ['bld', 'Споруди', 'bld_5'], ['task', 'Завдання', 'ic_14'], ['inv', 'Інвестори', INVEST.icon], ['coll', 'Колекції', 'card_1'], ['bud', 'Бюджет', 'ic_6'], ['chat', 'Чат', 'ic_3'], ['set', 'Налаштування', 'ic_10']];
   openModal({ icon: 'bz_office', title: C.name, sub: `${tr('Корпорація')} · ${tr('рівень')} ${C.lvl}`, color: '#1f4fb8' }, () => {
     const xpPct = Math.min(100, C.xp / C.need * 100);
     let h = `<div class="cp-head"><img class="cp-em" src="${CSRC(C.emblem)}" alt=""><div class="grow"><b>${nk(C.name)}</b>
@@ -179,6 +182,8 @@ function corpPage() {
             <div class="ct3-who">${who || `<div class="ct3-none">${tr('Ніхто ще не взяв')}</div>`}</div>
             ${main || canCancel ? `<div class="ct3-btns">${main}${canCancel ? `<button class="btn red" data-a="tcancel" data-v="${t.id}">✕ ${tr('Скасувати')}</button>` : ''}</div>` : ''}</div>
           <div class="ct3-r">${t.done ? `<img src="${IMG('check')}" alt=""><b>${tr('Готово')}</b>` : `<img src="${IMG('stopwatch')}" alt=""><b data-end="${end}">${fmtT(end - nowS)}</b>`}</div></div>`; }).join(''); }
+    // ---- інвестори: переговори ----
+    if (corpTab === 'inv') h += invHTML(C, my);
     // ---- колекції (строго по черзі, оновлення раз на 3 дні) ----
     if (corpTab === 'coll') { const K = C.coll, pos = K.pos;
       h += `<div class="ccol-top"><span>${tr('Зібрано')}: <b>${pos}/${K.order.length}</b></span><span>⏳ ${tr('Оновлення через')} <b data-end="${K.ends}">${fmtT(K.ends - nowS)}</b></span></div>` + ctaskHTML(C, pos >= K.order.length);
@@ -210,7 +215,8 @@ function corpPage() {
       : `<div class="soon"><img src="${CSRC('ic_10')}" alt=""><b>${tr('Налаштування')}</b><p>${tr('Змінювати назву та герб корпорації може лише Директор.')}</p></div>`;
     return h;
   }, {
-    tab: v => { corpTab = v; $('#m-body')._h = null; modalRefresh(); scrollTopHard($('#m-body')); if (v === 'chat') corpChatLoad(true); },
+    tab: v => { corpTab = v; $('#m-body')._h = null; modalRefresh(); scrollTopHard($('#m-body')); if (v === 'chat') corpChatLoad(true); if (v === 'inv') { invLoad(); invTimer(true); } else invTimer(false); },
+    ...invActions,
     pl: v => openPlayer(+v, () => openCorp()),
     up: v => { const b = CORP_BLD.find(x => x.id === v), l = C.bld[v] || 0, cost = bldCost(l);
       confirmBox({ icon: 'bz_office', title: `${tr(b.name)} → ${l + 1}`, text: `${bonusTxt(b, l + 1)}<br>${tr('Вартість з бюджету')}: <b>${fmt(cost.bucks || cost.coins)}</b> ${cost.bucks ? tr('банкнот') : tr('монет')}`, yes: tr('Покращити'), cls: 'green', back: () => openCorp() },
@@ -261,6 +267,7 @@ function corpPage() {
   $('#modal').classList.add('tall'); corpRef = modalRefresh;
   $('#m-body').onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'cc-in') { e.preventDefault(); const b = $('[data-a="csend"]'); if (b) b.click(); } };
   if (corpTab === 'chat') corpChatLoad(true);
+  if (corpTab === 'inv') { invLoad(); invTimer(true); } else invTimer(false);
   clearInterval(corpChatT); corpChatT = setInterval(() => { if (!$('#cc-list') || !$('#modal-bg').classList.contains('show')) return; if (!document.hidden) corpChatLoad(); }, 5000);
 }
 // особисте завдання колекції (як в особистих колекціях): 12 год на виконання, скасування раз на 3 год
@@ -356,4 +363,210 @@ async function corpReport(now) {
   if (r.done) { toast(r.claim ? tr('Завдання корпорації виконано! Забери нагороду в завданнях') : tr('Завдання корпорації виконано!'), 'bz_office', true); sfx('level'); netPullMail(); }
   if (r.coll) { toast(tr('Колекцію корпорації зібрано!'), 'bz_office', true); confetti(30); }
   if (r.up) toast(`${tr('Корпорація досягла рівня')} ${r.lvl}!`, 'bz_office', true);
+}
+
+// ===================================================================
+//  Інвестори в корпорацію: переговори
+//  Директор призначає зустріч, усі збираються 5 хвилин, далі інвестори
+//  ставлять питання. Виручка кожного учасника фіксується на вході —
+//  чим вона вища, тим вагоміша кожна правильна відповідь.
+// ===================================================================
+const INV = { st: null, info: null, t: null, pick: 'easy', place: 'hall', sent: 0, last: null, hint: null, busy: false };
+const invTxt = s => (typeof mtText === 'function' ? mtText(s) : s);
+const invQ = (mode, i) => (INVEST.q[mode] || INVEST.q.easy)[i] || ['', ['', '', '', '']];
+// заздалегідь просимо машинний переклад усіх питань сесії, щоб вони не «стрибали» під час відповідей
+function invPrefetch(st) {
+  if (!st || !st.qs || (S.settings.lang || 'uk') === 'uk') return;
+  st.qs.forEach(i => { const q = invQ(st.mode, i); invTxt(q[0]); q[1].forEach(invTxt); });
+}
+const invDayName = n => ['', 'понеділок', 'вівторок', 'середа', 'четвер', "п'ятниця", 'субота', 'неділя'][n] || '';
+const invDaysTxt = () => INVEST.days.map(d => tr(invDayName(d))).join(', ');
+const invRevNeed = (m, lvl) => Math.round(m.rev * (1 + 0.25 * Math.max(0, lvl - 1)));
+const invMyRev = () => (typeof revHourRate === 'function' ? revHourRate() : 0);
+
+// ---------- запити ----------
+async function invLoad(soft) {
+  const r = await api('corp_inv_info'); if (!r.ok) { if (!soft) toast(cErr(r.error), 'bz_office', true); return; }
+  INV.info = r; INV.st = r.inv || null; if (r.last) INV.last = r.last;
+  invPrefetch(INV.st);
+  if (corpShowing() && corpTab === 'inv') { $('#m-body')._h = null; modalRefresh(); }
+}
+async function invPoll() {
+  if (INV.busy) return; INV.busy = true;
+  try {
+    const r = await api('corp_inv_state'); if (!r.ok) return;
+    if (r.done) { INV.st = null; INV.last = r.done; invShowResult(r.done); await invLoad(true); return; }
+    const was = INV.st && INV.st.round;
+    INV.st = r.inv || null;
+    if (INV.st) { invPrefetch(INV.st); if (was !== undefined && was !== INV.st.round) { INV.sent = 0; INV.hint = null; } }
+    else await invLoad(true);
+    if (corpShowing() && corpTab === 'inv') { $('#m-body')._h = null; modalRefresh(); }
+  } finally { INV.busy = false; }
+}
+function invTimer(on) {
+  clearInterval(INV.t); INV.t = null;
+  if (!on) return;
+  INV.t = setInterval(() => {
+    if (!corpShowing() || corpTab !== 'inv') { invTimer(false); return; }
+    if (document.hidden) return;
+    if (INV.st) invPoll(); else { $('#m-body')._h = null; modalRefresh(); }
+  }, 1000);
+}
+
+// ---------- підсумкове вікно ----------
+function invShowResult(R) {
+  if (!R) return;
+  const m = invMode(R.mode), me = NET.auth && NET.auth.player.id;
+  const mine = (R.parts || []).find(p => p.id === me);
+  const items = [];
+  if (R.ok) { items.push({ img: BUCK, text: '+' + fmt(R.bucks) }, { img: COIN, text: '+' + fmt(R.coins) }, { img: 'star3', text: '+' + fmt(R.xp) }); }
+  if (mine && mine.share >= INVEST.minShare) items.push({ img: BUCK, text: '+' + m.me + tr(' тобі') });
+  sfx(R.ok ? 'level' : 'err'); if (R.ok) confetti(40);
+  showReward({ title: R.ok ? 'Інвестори погодились!' : 'Інвестори взяли паузу', img: R.ok ? 'bz_office' : 'clipboard',
+    name: `${tr('Прогрес команди')}: ${R.pct}%`, items,
+    text: R.ok ? 'Нагорода вже в бюджеті корпорації, а твоя частина — у пошті.'
+               : 'Цього разу не вистачило. Персональні нагороди учасникам уже в пошті — спробуйте ще раз наступного разу.' });
+}
+
+// ---------- розмітка вкладки ----------
+function invHTML(C, my) {
+  const I = INV.info, st = INV.st, lvl = C.lvl, nowS = Date.now() / 1000;
+  if (!I) return `<div class="inv-load"><img src="${CSRC(INVEST.icon)}" alt=""><span>${tr('Завантаження…')}</span></div>`;
+  if (st) return st.st === 'lobby' ? invLobbyHTML(st, C, my) : invRunHTML(st, C);
+  return invIdleHTML(I, C, my, lvl, nowS);
+}
+
+// --- немає переговорів: правила, нагороди й кнопка директора ---
+function invIdleHTML(I, C, my, lvl, nowS) {
+  const cool = Math.max(0, I.cool - (Date.now() / 1000 - (I.now || 0))), can = my >= 4, ok = I.day_ok && cool <= 0;
+  let h = `<div class="inv-hero"><div class="inv-hero-art"><img class="ih-main" src="${CSRC('ic_9')}" alt=""><img class="ih-s a" src="${CSRC('ic_4')}" alt=""><img class="ih-s b" src="${CSRC('ic_2')}" alt=""></div>
+      <div class="ih-txt"><b>${tr('Інвестори в корпорацію')}</b><p>${tr('Переговори — командна подія. Інвестори ставлять питання, а вагу вашої відповіді визначає виручка за годину: чим багатша вежа, тим легше переконати інвестора.')}</p></div></div>
+    <div class="inv-when ${ok ? 'on' : ''}"><img src="${CSRC('ic_7')}" alt="">
+      <div class="grow"><b>${tr('Дні переговорів')}: ${invDaysTxt()}</b>
+        <small>${I.day_ok ? (cool > 0 ? `${tr('Наступні переговори через')} <b data-end="${nowS + cool}">${fmtT(cool)}</b>` : tr('Сьогодні переговори доступні'))
+                          : `${tr('Сьогодні вихідний в інвесторів. Найближчий день')}: ${tr(invDayName(I.next_dow || 1))}`}</small></div></div>`;
+
+  h += `<div class="pst inv-pst">${tr('Режими й нагороди')}</div><div class="inv-modes">` + INVEST.modes.map(m => {
+    const sel = INV.pick === m.id;
+    return `<div class="invm ${sel ? 'on' : ''} ${can ? 'pick' : ''}" style="--mc:${m.color}" ${can ? `data-a="invmode" data-v="${m.id}"` : ''}>
+      <div class="invm-h"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr(m.name)}</b><small>${m.rounds} ${tr('питань')} · ${m.sec} ${tr('с на відповідь')}</small></div>${sel && can ? '<i class="invm-ok">✓</i>' : ''}</div>
+      <div class="invm-rw"><div><small>${tr('Корпорації')}</small><span><img src="${IMG(BUCK)}">${fmt(m.corp.bucks)}</span><span><img src="${IMG(COIN)}">${fmt(m.corp.per * C.lvl)}</span><span><img src="${IMG('star3')}">${fmt(m.corp.per * C.lvl)}</span></div>
+        <div><small>${tr('Учаснику')}</small><span><img src="${IMG(BUCK)}">${m.me}</span></div></div>
+      <div class="invm-rev"><img src="${CSRC('ic_4')}" alt="">${tr('Виручка/год для повного бонусу')}: <b>${fmt(invRevNeed(m, C.lvl))}</b></div></div>`;
+  }).join('') + '</div>';
+
+  if (can) {
+    h += `<div class="pst inv-pst">${tr('Місце переговорів')}</div><div class="inv-places">` + INVEST.places.map(p =>
+      `<button class="invp ${INV.place === p.id ? 'on' : ''}" data-a="invplace" data-v="${p.id}"><img src="${CSRC(p.img)}" alt=""><b>${tr(p.name)}</b><small>${tr(p.note)}</small></button>`).join('') + '</div>';
+    h += `<button class="btn gold shine wide inv-start" data-a="invgo" ${ok ? '' : 'disabled'}><img src="${CSRC('ic_3')}" class="ib">${ok ? tr('Почати переговори') : I.day_ok ? `${tr('Через')} ${fmtT(cool)}` : tr('Сьогодні інвестори не приймають')}</button>
+      <div class="note small">${tr('Після початку всі учасники отримають сповіщення й матимуть 5 хвилин, щоб приєднатися.')}</div>`;
+  } else {
+    h += `<div class="note small">${tr('Призначити переговори може лише Директор корпорації. Стеж за сповіщенням — на збір дається 5 хвилин.')}</div>`;
+  }
+  h += `<div class="pst inv-pst">${tr('Як рахується прогрес')}</div><div class="inv-how">
+    <div><img src="${CSRC('ic_7')}" alt=""><span>${tr('Кожна правильна відповідь дає очки команді. Неправильна не дає нічого — але й не віднімає.')}</span></div>
+    <div><img src="${CSRC('ic_4')}" alt=""><span>${tr('Виручка за годину фіксується в мить, коли ти приєднуєшся. Якщо потім вона впаде — на переговори це вже не вплине.')}</span></div>
+    <div><img src="${CSRC('ic_8')}" alt=""><span>${tr('У розрахунок ідуть лише ті, хто відповідає. Хто зайшов і мовчить — команді не шкодить, але й нагороди не отримає.')}</span></div>
+    <div><img src="${IMG(BUCK)}" alt=""><span>${tr('Персональні банкноти отримує кожен, хто дав команді щонайменше 1% прогресу.')}</span></div></div>`;
+  if (INV.last) h += invLastHTML(INV.last);
+  return h;
+}
+
+function invLastHTML(R) {
+  const m = invMode(R.mode);
+  return `<div class="pst inv-pst">${tr('Минулі переговори')}</div>
+    <div class="inv-last ${R.ok ? 'ok' : 'no'}"><div class="il-h"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr(m.name)} · ${R.pct}%</b>
+        <small>${R.ok ? tr('Успішно — нагорода в бюджеті') : tr('Не вистачило прогресу')}</small></div><em>${R.ok ? '✓' : '✕'}</em></div>
+      <div class="il-p">${(R.parts || []).map(p => `<span class="${p.share >= INVEST.minShare ? 'pay' : ''}">${nk(p.nick)} <b>${p.share}%</b></span>`).join('') || tr('Учасників не було')}</div></div>`;
+}
+
+// --- збір учасників ---
+function invLobbyHTML(st, C, my) {
+  const left = Math.max(0, st.begin - Date.now() / 1000), m = invMode(st.mode), pl = invPlace(st.place);
+  const mine = st.me || {}, myRev = invMyRev(), bonus = Math.min(1, myRev / invRevNeed(m, st.lvl) * (pl.rev || 1));
+  let h = `<div class="inv-live lobby" style="--mc:${m.color}">
+    <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Інвестори вже в дорозі')}</b><small>${tr(m.name)} · ${tr(pl.name)}</small></div></div>
+    <div class="ivl-clock"><span>${tr('Початок через')}</span><b data-end="${st.begin}">${fmtT(left)}</b></div>
+    <div class="cb-bar big"><i style="width:${Math.max(0, 100 - left / INVEST.lobby * 100)}%"></i></div></div>`;
+  if (mine.in) {
+    h += `<div class="inv-me ok"><img src="${CSRC('ic_4')}" alt=""><div class="grow"><b>${tr('Ти в переговорній')}</b>
+        <small>${tr('Зафіксована виручка/год')}: <b>${fmt(mine.rev)}</b> · ${tr('вага відповіді')} <b>×${mine.mul}</b></small></div></div>`;
+  } else {
+    h += `<div class="inv-me"><img src="${CSRC('ic_4')}" alt=""><div class="grow"><b>${tr('Твоя виручка/год зараз')}: ${fmt(myRev)}</b>
+        <small>${tr('Вага відповіді буде')} <b>×${(1 + bonus).toFixed(2)}</b> ${tr('з')} ×2 ${tr('максимум')}</small></div></div>
+      <button class="btn green shine wide" data-a="invjoin"><img src="${CSRC('ic_3')}" class="ib">${tr('Приєднатися до переговорів')}</button>`;
+  }
+  h += `<div class="pst inv-pst">${tr('Зібралися')} · ${(st.parts || []).length}/${C.members.length}</div><div class="inv-parts">` +
+    (st.parts || []).map(p => `<div class="ivp"><span class="fav pl-av" data-a="pl" data-v="${p.id}">${avHTML((C.members.find(x => x.id === p.id) || {}).avatar)}</span>
+      <div class="grow"><b>${nk(p.nick)}</b><small><img src="${CSRC('ic_4')}">${fmt(p.rev)}</small></div><em>×${p.mul}</em></div>`).join('') +
+    (st.parts && st.parts.length ? '' : `<div class="note small">${tr('Поки нікого — заходьте!')}</div>`) + '</div>';
+  h += `<div class="note small">${tr('Хто не встигне до першого питання — у переговорах не бере участі й нагороди не отримує.')}</div>`;
+  return h;
+}
+
+// --- самі переговори ---
+function invRunHTML(st, C) {
+  const m = invMode(st.mode), pl = invPlace(st.place), left = Math.max(0, st.r_ends - Date.now() / 1000);
+  const pct = Math.min(100, st.pct), mine = st.me || {};
+  let h = `<div class="inv-live run" style="--mc:${m.color}">
+    <div class="ivl-top"><img src="${CSRC(m.icon)}" alt=""><div class="grow"><b>${tr('Переговори')} · ${tr(pl.name)}</b>
+      <small>${tr('Питання')} ${Math.min(st.round + 1, st.rounds)} ${tr('з')} ${st.rounds}</small></div><em class="ivl-sec ${left <= 5 ? 'hot' : ''}">${Math.ceil(left)}</em></div>
+    <div class="ivl-prog"><div class="cb-bar big"><i style="width:${pct}%"></i><span>${tr('Прогрес команди')} ${st.pct}%</span></div></div>
+    <div class="ivl-tick"><i style="width:${Math.max(0, left / st.sec * 100)}%"></i></div></div>`;
+
+  if (!mine.in) {
+    h += `<div class="inv-me no"><img src="${CSRC('ic_7')}" alt=""><div class="grow"><b>${tr('Ти не встиг на збір')}</b><small>${tr('Можна лише спостерігати. Наступного разу приєднуйся за 5 хвилин до початку.')}</small></div></div>`;
+  } else if (st.q) {
+    const Q = invQ(st.mode, st.q.i), ord = st.q.ord || [0, 1, 2, 3];
+    const answered = mine.done || INV.sent === st.round + 1;
+    h += `<div class="inv-q"><div class="ivq-who"><img src="${CSRC('ic_9')}" alt=""><span>${tr('Інвестор запитує')}</span></div>
+      <div class="ivq-t">${esc(invTxt(Q[0]))}</div>
+      <div class="ivq-opts">` + ord.map((orig, j) => {
+        const hint = INV.hint && INV.hint.round === st.round ? INV.hint : null;
+        const cls = hint ? (j === hint.right ? 'right' : (j === hint.pick ? 'wrong' : '')) : '';
+        return `<button class="ivo ${cls} ${answered ? 'lock' : ''}" ${answered ? 'disabled' : `data-a="invans" data-v="${j}"`}><i>${'ABCD'[j]}</i><span>${esc(invTxt(Q[1][orig]))}</span></button>`;
+      }).join('') + `</div>
+      ${answered ? `<div class="ivq-wait">${INV.hint && INV.hint.round === st.round ? (INV.hint.hit ? `<b class="ok">✓ ${tr('Інвестор задоволений')}</b> +${INV.hint.gain}` : `<b class="no">✕ ${tr('Інвестор хитає головою')}</b>`) : tr('Відповідь прийнято')} · ${tr('чекаємо наступне питання')}</div>` : ''}</div>`;
+  }
+  h += `<div class="inv-sum"><div><img src="${CSRC('ic_14')}"><b>${mine.in ? mine.nn : 0}</b><small>${tr('влучних')}</small></div>
+      <div><img src="${CSRC('ic_4')}"><b>×${mine.in ? mine.mul : '—'}</b><small>${tr('вага')}</small></div>
+      <div><img src="${CSRC('ic_13')}"><b>${mine.in ? mine.share : 0}%</b><small>${tr('твій внесок')}</small></div></div>`;
+  h += `<div class="pst inv-pst">${tr('Команда')}</div><div class="inv-parts">` + (st.parts || []).map(p =>
+    `<div class="ivp"><span class="fav pl-av">${avHTML((C.members.find(x => x.id === p.id) || {}).avatar)}</span>
+      <div class="grow"><b>${nk(p.nick)}</b><small>${p.nn} ${tr('влучних')} · ×${p.mul}</small></div><em>${p.share}%</em></div>`).join('') + '</div>';
+  return h;
+}
+
+// ---------- дії ----------
+const invActions = {
+  invmode: v => { INV.pick = v; sfx('click'); $('#m-body')._h = null; modalRefresh(); },
+  invplace: v => { INV.place = v; sfx('click'); $('#m-body')._h = null; modalRefresh(); },
+  invgo: () => {
+    const m = invMode(INV.pick), p = invPlace(INV.place);
+    confirmBox({ icon: 'bz_office', title: tr('Почати переговори?'), cls: 'green', yes: tr('Запросити інвесторів'), back: () => openCorp('inv'),
+      text: `<b>${tr(m.name)}</b> · ${tr(p.name)}<br>${m.rounds} ${tr('питань')} · ${m.sec + (p.time || 0)} ${tr('с на відповідь')}<br><br>${tr('Усім учасникам прийде сповіщення. На збір — 5 хвилин. Наступні переговори — тільки через 24 години.')}` },
+      async () => {
+        const r = await api('corp_inv_start', { mode: INV.pick, place: INV.place });
+        if (!r.ok) return toast(cErr(r.error), 'bz_office', true);
+        INV.st = r.inv; sfx('level'); confetti(25); toast(tr('Інвестори в дорозі! Збирайте команду'), 'bz_office', true);
+        await invJoin(true); openCorp('inv');
+      });
+  },
+  invjoin: () => invJoin(),
+  invans: async v => {
+    const st = INV.st; if (!st || INV.sent === st.round + 1) return;
+    INV.sent = st.round + 1; sfx('click');
+    const r = await api('corp_inv_answer', { opt: +v });
+    if (!r.ok) { INV.sent = 0; return toast(cErr(r.error), 'bz_office', true); }
+    INV.hint = { round: st.round, pick: +v, right: r.right, hit: r.hit, gain: r.gain };
+    if (r.inv) INV.st = r.inv;
+    sfx(r.hit ? 'coin' : 'err'); if (r.hit) vibrate(20);
+    if (corpShowing()) { $('#m-body')._h = null; modalRefresh(); }
+  },
+};
+async function invJoin(quiet) {
+  const r = await api('corp_inv_join', { rev: invMyRev() });
+  if (!r.ok) { if (!quiet) toast(cErr(r.error), 'bz_office', true); return; }
+  INV.st = r.inv; if (!quiet) { sfx('ding'); toast(tr('Ти в переговорній! Виручку зафіксовано'), 'bz_office', true); }
+  if (corpShowing()) { $('#m-body')._h = null; modalRefresh(); }
 }

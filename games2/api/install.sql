@@ -400,6 +400,50 @@ CREATE TABLE IF NOT EXISTS corp_chat (
   CONSTRAINT fk_cc_corp FOREIGN KEY (corp_id) REFERENCES corps(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Переговори з інвесторами: одна сесія на корпорацію, учасники — окремо
+CREATE TABLE IF NOT EXISTS corp_invest (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  corp_id       INT UNSIGNED NOT NULL,
+  starter_id    INT UNSIGNED NOT NULL,
+  mode          VARCHAR(8)   NOT NULL DEFAULT 'easy',
+  place         VARCHAR(8)   NOT NULL DEFAULT 'hall',
+  seed          INT UNSIGNED NOT NULL DEFAULT 1,
+  lvl           INT UNSIGNED NOT NULL DEFAULT 1,
+  state         TINYINT      NOT NULL DEFAULT 0,   -- 0 триває, 2 завершено
+  started_at    INT UNSIGNED NOT NULL DEFAULT 0,
+  begin_at      INT UNSIGNED NOT NULL DEFAULT 0,   -- кінець збору / перше питання
+  ended_at      INT UNSIGNED NOT NULL DEFAULT 0,
+  score         DOUBLE       NOT NULL DEFAULT 0,
+  need          DOUBLE       NOT NULL DEFAULT 0,
+  pct           DOUBLE       NOT NULL DEFAULT 0,
+  ok            TINYINT      NOT NULL DEFAULT 0,
+  r_bucks       BIGINT       NOT NULL DEFAULT 0,
+  r_coins       DOUBLE       NOT NULL DEFAULT 0,
+  r_xp          DOUBLE       NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY ix_corp (corp_id, id),
+  KEY ix_live (corp_id, state),
+  CONSTRAINT fk_inv_corp FOREIGN KEY (corp_id) REFERENCES corps(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS corp_invest_p (
+  id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  inv_id        INT UNSIGNED NOT NULL,
+  player_id     INT UNSIGNED NOT NULL,
+  rev           DOUBLE       NOT NULL DEFAULT 0,   -- виручка за годину, зафіксована на вході
+  mul           DOUBLE       NOT NULL DEFAULT 1,   -- очок за правильну відповідь
+  score         DOUBLE       NOT NULL DEFAULT 0,
+  hits          INT UNSIGNED NOT NULL DEFAULT 0,
+  answers       TINYINT      NOT NULL DEFAULT 0,
+  last_round    INT          NOT NULL DEFAULT -1,
+  share         DOUBLE       NOT NULL DEFAULT 0,
+  joined_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_inv_player (inv_id, player_id),
+  KEY ix_player (player_id),
+  CONSTRAINT fk_invp_inv FOREIGN KEY (inv_id) REFERENCES corp_invest(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Заявки на донат: гравець обирає пакет → адміністратор після ручної оплати підтверджує або відхиляє.
 -- Бонус акції фіксується в момент заявки, щоб гравець отримав саме те, що бачив.
 CREATE TABLE IF NOT EXISTS donations (

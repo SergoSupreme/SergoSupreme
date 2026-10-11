@@ -75,7 +75,7 @@ function ensureSchema(bool $force = false) {
             'hotel_lvl' => 'INT UNSIGNED NOT NULL DEFAULT 1', 'chests' => 'INT UNSIGNED NOT NULL DEFAULT 0', 'achievements' => 'INT UNSIGNED NOT NULL DEFAULT 0'] as $c => $def)
     if (!q("SHOW COLUMNS FROM player_stats LIKE '$c'")->fetch()) db()->exec("ALTER TABLE player_stats ADD COLUMN $c $def");
   $sql = file_get_contents(__DIR__ . '/install.sql');
-  foreach (['player_floors', 'player_residents', 'friends', 'player_blocks', 'dm_messages', 'promos', 'promo_claims', 'balance_log', 'econ_daily', 'admin_log', 'reward_claims', 'gifts', 'settings', 'corps', 'corp_members', 'corp_invites', 'corp_don', 'corp_log', 'corp_chat', 'donations', 'tour_cups', 'tour_corp', 'tr_cache', 'push_tokens', 'push_queue', 'push_bcast', 'push_state', 'push_log'] as $t) if (preg_match('/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=[^;]+;/s', $sql, $m)) db()->exec($m[0]);
+  foreach (['player_floors', 'player_residents', 'friends', 'player_blocks', 'dm_messages', 'promos', 'promo_claims', 'balance_log', 'econ_daily', 'admin_log', 'reward_claims', 'gifts', 'settings', 'corps', 'corp_members', 'corp_invites', 'corp_don', 'corp_log', 'corp_chat', 'corp_invest', 'corp_invest_p', 'donations', 'tour_cups', 'tour_corp', 'tr_cache', 'push_tokens', 'push_queue', 'push_bcast', 'push_state', 'push_log'] as $t) if (preg_match('/CREATE TABLE IF NOT EXISTS ' . $t . ' \(.*?\) ENGINE=[^;]+;/s', $sql, $m)) db()->exec($m[0]);
   // стандартні новини більше не потрібні — новини створює лише адміністратор
   q("DELETE FROM news WHERE id <= 7 AND title IN ('Ласкаво просимо!','Колекції','Лабіринт','Лотерея','Щаслива година','Вертолітний майданчик','Сезонний пропуск')");
   db()->exec('ALTER TABLE news AUTO_INCREMENT = 100');
@@ -300,6 +300,8 @@ try {
       $dm = (int)$x['dm']; $mail = (int)$x['mx'];
       $cm = q('SELECT c.id, c.name, c.emblem, c.bld, c.boosts, c.build, m.role FROM corp_members m JOIN corps c ON c.id = m.corp_id WHERE m.player_id = ?', [$pid0])->fetch();
       $corp = $cm ? ['id' => (int)$cm['id'], 'name' => $cm['name'], 'emblem' => $cm['emblem'], 'role' => (int)$cm['role'], 'bld' => (function () use ($cm) { $b = json_decode((string)$cm['bld'], true) ?: []; foreach ((json_decode((string)$cm['build'], true) ?: []) as $k => $x) if ($x[1] <= time()) $b[$k] = max($b[$k] ?? 0, (int)$x[0]); return $b ?: new stdClass(); })(), 'boost' => json_decode((string)$cm['boosts'], true) ?: new stdClass()] : null;
+      // переговори з інвесторами: коротка картка для банера в грі (і підбиття підсумків, якщо вони щойно скінчилися)
+      if ($corp) { require_once __DIR__ . '/invest.php'; $corp['inv'] = invSweep((int)$cm['id']); }
       $hasInv = (int)$x['inv'] > 0;
       out(['ok' => true, 'corp' => $corp, 'cinv' => $hasInv, 'cfg' => $cfg, 'dm' => $dm, 'access' => (int)($p['access'] ?? 0), 'nst' => $news, 'pst' => $promo, 'mst' => $mail, 'active' => !$r || !$r['active_token'] || hash_equals($r['active_token'], hash('sha256', bearer())), 'rev' => $r ? (int)$r['rev'] : 0]);
     }

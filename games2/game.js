@@ -2652,3 +2652,44 @@ function init() {
   offlineReport = null;
 }
 document.addEventListener('DOMContentLoaded', init);
+
+// ===================================================================
+//  Сповіщення-банер: висить угорі екрана, поки подія триває.
+//  Має пряму кнопку «Перейти» і хрестик — закритий банер більше не повертається.
+//  Зараз ним користуються переговори з інвесторами.
+// ===================================================================
+const BANNER = { key: '', end: 0 };
+function bannerHide() { const el = $('#gbanner'); if (!el) return; el.hidden = true; el.innerHTML = ''; BANNER.key = ''; }
+function bannerShow({ key, icon, corpIcon, title, text, end, btn, go }) {
+  const el = $('#gbanner'); if (!el) return;
+  BANNER.end = end || 0; BANNER.go = go;
+  if (BANNER.key === key) { const b = el.querySelector('.gb-time'); if (b && end) b.textContent = fmtT(Math.max(0, end - now())); return; }
+  BANNER.key = key; el.hidden = false;
+  el.innerHTML = `<div class="gb"><img class="gb-ic" src="${corpIcon && typeof CSRC === 'function' ? CSRC(corpIcon) : IMG(icon || 'bell')}" alt="">
+    <div class="gb-txt"><b>${tr(title)}</b><small>${tr(text)}${end ? ' · <b class="gb-time">' + fmtT(Math.max(0, end - now())) + '</b>' : ''}</small></div>
+    <button class="gb-go" data-gb="go">${tr(btn || 'Перейти')}</button>
+    <button class="gb-x" data-gb="x" aria-label="${tr('Закрити')}">✕</button></div>`;
+  el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#gbanner [data-gb]'); if (!b) return;
+  e.stopPropagation();
+  if (b.dataset.gb === 'x') { if (typeof invBannerClose === 'function') invBannerClose(); bannerHide(); sfx('click'); return; }
+  const go = BANNER.go; bannerHide(); if (typeof go === 'function') go();
+}, true);
+
+// ---------- банер переговорів з інвесторами ----------
+let invBanDismissed = 0;
+function invBannerClose() { const v = NET.corp && NET.corp.inv; if (v) invBanDismissed = v.id; }
+function invBannerSync() {
+  const v = NET.corp && NET.corp.inv;
+  if (!v || invBanDismissed === v.id || (S.tut && !S.tut.done)) { if (BANNER.key && BANNER.key.startsWith('inv')) bannerHide(); return; }
+  const m = (typeof invMode === 'function' ? invMode(v.mode) : null) || { name: '' };
+  const lobby = v.st === 'lobby';
+  bannerShow({ key: 'inv' + v.id + v.st, corpIcon: 'ic_9',
+    title: lobby ? 'Інвестори прибули!' : 'Переговори вже тривають',
+    text: lobby ? `${tr(m.name)} · ${tr('збір закінчиться за')}` : `${tr(m.name)} · ${tr('залишилось')}`,
+    end: lobby ? v.begin : v.ends, btn: 'Перейти',
+    go: () => { if (typeof openCorp === 'function') openCorp('inv'); } });
+}
+setInterval(() => { if (!document.hidden) invBannerSync(); }, 1000);

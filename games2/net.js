@@ -171,7 +171,7 @@ function netApplyCfg(c) {
 // Живі оновлення від адміністрації: права доступу, новини, акції, пошта — без перезавантаження сторінки
 function netLiveSync(r) {
   if (r.cfg) netApplyCfg(r.cfg);
-  if ('corp' in r) { const was = JSON.stringify(NET.corp || null); NET.corp = r.corp; NET.cinv = r.cinv; if (was !== JSON.stringify(r.corp || null)) { if (r.corp && !S.corpRep && typeof corpProgInit === 'function') corpProgInit(); render(); } }
+  if ('corp' in r) { const was = JSON.stringify(NET.corp || null); NET.corp = r.corp; NET.cinv = r.cinv; if (was !== JSON.stringify(r.corp || null)) { if (r.corp && !S.corpRep && typeof corpProgInit === 'function') corpProgInit(); render(); } if (typeof invBannerSync === 'function') invBannerSync(); }
   if (!NET.auth || !NET.auth.player) return;
   if (r.access != null && +r.access !== +(NET.auth.player.access || 0)) {
     NET.auth.player.access = +r.access; NET.auth.player.admin = +r.access === 1; netStoreAuth();
@@ -621,7 +621,7 @@ function netDmBadge(n) {
 })();
 
 // ---------- пуш-сповіщення (лише в Android-застосунку: він дає токен Firebase через window.HmApp) ----------
-const PUSH_GROUPS = [['msg', 'Повідомлення та подарунки', 'mail2'], ['chat', 'Загальний чат', 'chat'], ['promo', 'Акції, новини та роздачі', 'fireworks'], ['tour', 'Турніри', 'ach_cup'], ['tower', 'Нагадування про вежу', 'crane']];
+const PUSH_GROUPS = [['msg', 'Повідомлення та подарунки', 'mail2'], ['chat', 'Загальний чат', 'chat'], ['promo', 'Акції, новини та роздачі', 'fireworks'], ['tour', 'Турніри', 'ach_cup'], ['corp', 'Корпорація та інвестори', 'bz_office'], ['tower', 'Нагадування про вежу', 'crane']];
 const hasApp = () => !!(window.HmApp && typeof HmApp.getPushToken === 'function');
 const pushCfg = () => (S.settings.push = S.settings.push || { all: true, off: [] });
 const pushOff = () => { const p = pushCfg(); return p.all === false ? ['all'] : (p.off || []); };
@@ -653,6 +653,7 @@ function pushOpenNow() {
     else if (t === 'gifts') openGifts(NET.auth.player.id, NET.auth.player.nick);
     else if (t === 'news' || t === 'promo') openNews();
     else if (t === 'corp') openCorp('mem');
+    else if (t === 'inv') openCorp('inv');
     else if (t === 'cchat') openCorp('chat');
     else if (t === 'chat') { forumTab = 'chat'; forumTopic = null; openForum(); }
     else if (t === 'tour') openTour('p');

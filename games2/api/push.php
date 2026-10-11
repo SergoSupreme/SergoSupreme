@@ -6,11 +6,12 @@
 // ============================================================
 const PUSH_KEY = __DIR__ . '/firebase-key.json';
 const PUSH_CAP = 4;                       // несоціальних сповіщень на добу на гравця
-const PUSH_NOW = ['dm', 'gift', 'cinv', 'cchat', 'reply', 'gchat', 'test'];  // ці не чекають ранку і не входять у денний ліміт
+const PUSH_NOW = ['dm', 'gift', 'cinv', 'cchat', 'reply', 'gchat', 'inv', 'test'];  // ці не чекають ранку і не входять у денний ліміт (переговори — подія на 5 хвилин, чекати не можна)
 const PUSH_LATER = ['dm', 'cchat', 'reply', 'gchat'];  // чекають 1 хв: якщо гравець за цей час був у грі — він уже все бачив
 const PUSH_WAIT = 60;
 const PUSH_GROUP = ['dm' => 'msg', 'gift' => 'msg', 'cinv' => 'msg', 'cchat' => 'msg', 'reply' => 'chat', 'gchat' => 'chat', 'promo' => 'promo', 'news' => 'promo', 'give' => 'promo',
-  'don' => 'promo', 'adm' => 'promo', 'tour' => 'tour', 'idle1' => 'tower', 'idle2' => 'tower', 'idle3' => 'tower'];
+  'don' => 'promo', 'adm' => 'promo', 'tour' => 'tour', 'inv' => 'corp', 'idle1' => 'tower', 'idle2' => 'tower', 'idle3' => 'tower'];
+const PUSH_PREFS = ['all', 'msg', 'chat', 'promo', 'tour', 'corp', 'tower'];
 const PUSH_LANGS = ['uk', 'en', 'ru', 'de', 'fr', 'it', 'ja', 'ko', 'zh'];
 
 function pushOn(): bool { return is_file(PUSH_KEY); }
@@ -44,6 +45,16 @@ function pushTexts(): array {
       'uk' => ['💬 {corp}', '{nick}: {text}'], 'en' => ['💬 {corp}', '{nick}: {text}'], 'ru' => ['💬 {corp}', '{nick}: {text}'],
       'de' => ['💬 {corp}', '{nick}: {text}'], 'fr' => ['💬 {corp}', '{nick}: {text}'], 'it' => ['💬 {corp}', '{nick}: {text}'],
       'ja' => ['💬 {corp}', '{nick}: {text}'], 'ko' => ['💬 {corp}', '{nick}: {text}'], 'zh' => ['💬 {corp}', '{nick}: {text}']],
+    'inv' => [
+      'uk' => ['🤝 Інвестори прибули!', '{nick} починає переговори для «{corp}» — збір 5 хвилин'],
+      'en' => ['🤝 The investors are here!', '{nick} starts negotiations for «{corp}» — 5 minutes to gather'],
+      'ru' => ['🤝 Инвесторы прибыли!', '{nick} начинает переговоры для «{corp}» — сбор 5 минут'],
+      'de' => ['🤝 Die Investoren sind da!', '{nick} startet Verhandlungen für «{corp}» — 5 Minuten Sammelzeit'],
+      'fr' => ['🤝 Les investisseurs sont là !', '{nick} lance les négociations pour «{corp}» — 5 minutes pour se réunir'],
+      'it' => ['🤝 Gli investitori sono arrivati!', '{nick} avvia le trattative per «{corp}» — 5 minuti per radunarsi'],
+      'ja' => ['🤝 投資家が到着!', '{nick}さんが「{corp}」の交渉を開始 — 集合まで5分'],
+      'ko' => ['🤝 투자자들이 도착했어요!', '{nick}님이 «{corp}» 협상을 시작했어요 — 집합 5분'],
+      'zh' => ['🤝 投资人到了!', '{nick} 为「{corp}」开启谈判——5分钟内集合']],
     'test' => [
       'uk' => ['🔔 Тестове сповіщення', 'Якщо ти це бачиш — сповіщення працюють!'], 'en' => ['🔔 Test notification', 'If you can see this, notifications work!'],
       'ru' => ['🔔 Тестовое уведомление', 'Если ты это видишь — уведомления работают!'], 'de' => ['🔔 Test-Benachrichtigung', 'Wenn du das siehst, funktionieren Benachrichtigungen!'],
@@ -359,7 +370,7 @@ if (isset($a) && strncmp($a, 'push_', 5) === 0) {
       $tok = trim((string)arg('token', '')); if ($tok === '' || strlen($tok) > 255) fail('bad_token');
       $lang = in_array(arg('lang'), PUSH_LANGS, true) ? arg('lang') : 'uk';
       $tz = max(-720, min(840, (int)arg('tz', 120)));
-      $prefs = implode(',', array_intersect((array)arg('off', []), ['all', 'msg', 'chat', 'promo', 'tour', 'tower']));
+      $prefs = implode(',', array_intersect((array)arg('off', []), PUSH_PREFS));
       q('INSERT INTO push_tokens (token, player_id, lang, tz, prefs) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), lang = VALUES(lang), tz = VALUES(tz), prefs = VALUES(prefs), updated_at = NOW()',
         [$tok, $p['id'], $lang, $tz, $prefs]);
       out(['ok' => true, 'on' => pushOn()]);

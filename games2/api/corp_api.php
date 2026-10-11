@@ -5,13 +5,12 @@
 // ============================================================
 if (!defined('MIN_CLIENT')) { http_response_code(403); exit; }
 
+require_once __DIR__ . '/corp_core.php'; // досвід рівнів, пошта з нагородою, журнал
+
 const CORP_BLD = ['rev', 'xp', 'liftxp', 'liftrev', 'lobby', 'tips'];
 const CORP_MAX = 30;
 const CORP_ROLES = ['Новачок', 'Менеджер', 'Адміністратор', 'Зам. директора', 'Директор'];
 const CORP_COLL = ['tech', 'energy', 'finance', 'auto', 'retail', 'industry', 'fashion', 'medicine', 'food'];
-const CORP_XP = [150000000,185000000,229000000,282000000,349000000,431000000,532000000,657000000,811000000,1000000000,1240000000,1530000000,1880000000,2330000000,2870000000,3550000000,4380000000,5410000000,6680000000,8250000000,10200000000,12600000000,15500000000,19200000000,23700000000,29200000000,36100000000,44600000000,55100000000,68000000000,83900000000,104000000000,128000000000,158000000000,195000000000,241000000000,298000000000,367000000000,454000000000,560000000000,692000000000,854000000000,1050000000000,1300000000000,1610000000000,1990000000000,2450000000000,3030000000000,3740000000000,4620000000000,5700000000000,7040000000000,8690000000000,10700000000000,13300000000000,16400000000000,20200000000000,25000000000000,30800000000000,38000000000000,47000000000000,58000000000000,71600000000000,88400000000000,109000000000000,135000000000000,167000000000000,206000000000000,254000000000000,314000000000000,387000000000000,478000000000000,590000000000000,729000000000000,900000000000000]; // досвід для переходу з рівня N на N+1 (індекс N-1):
-// 75 рівнів, +23,5% за рівень — від 150 млн на 1-му до 900 трлн на 75-му. Досвід корпорації = 20% досвіду учасників.
-const CORP_LMAX = 75;
 const COLL_RB = [100, 150, 250, 400, 700, 1000, 1500, 2500, 4000];
 const COLL_RC = [10e6, 15e6, 25e6, 40e6, 70e6, 100e6, 150e6, 250e6, 400e6];
 const BOOSTABLE = ['rev', 'xp', 'liftxp', 'liftrev'];
@@ -30,8 +29,6 @@ function myCorp(int $pid): ?array {
   $m = q('SELECT c.*, m.corp_id, m.role, m.xp mxp, m.ctask, m.ctask_cancel, UNIX_TIMESTAMP(m.joined_at) joined FROM corp_members m JOIN corps c ON c.id = m.corp_id WHERE m.player_id = ?', [$pid])->fetch();
   return $m ?: null;
 }
-function corpXpNeed(int $L): float { return (float)(CORP_XP[min(CORP_LMAX, $L) - 1] ?? end(CORP_XP)); }
-function mailReward(int $to, string $title, string $body, array $rw) { q('INSERT INTO mail (player_id, sender, icon, title, body, reward) VALUES (?, ?, ?, ?, ?, ?)', [$to, 'Корпорація', 'bz_office', $title, $body, json_encode($rw)]); }
 function bldOf(array $c): array { $b = json_decode((string)($c['bld'] ?? ''), true) ?: []; $o = []; foreach (CORP_BLD as $k) $o[$k] = (int)($b[$k] ?? 0); return $o; }
 // Колекції: збираються строго по черзі, цикл оновлюється раз на 3 дні (новий порядок, прогрес з нуля)
 function collOf(array $c): array {
@@ -87,7 +84,6 @@ function finalizeBuild(array &$c): void {
   $c['bld'] = json_encode($bld); $c['build'] = json_encode($b ?: new stdClass());
   q('UPDATE corps SET bld = ?, build = ?, lvl_sum = ? WHERE id = ?', [$c['bld'], $c['build'], array_sum($bld), (int)($c['corp_id'] ?? $c['id'])]);
 }
-function clog(int $cid, ?int $pid, string $kind, string $info = '') { q('INSERT INTO corp_log (corp_id, player_id, kind, info) VALUES (?, ?, ?, ?)', [$cid, $pid, $kind, mb_substr($info, 0, 255)]); }
 function donLimit(int $pid): array {
   $don = (int)q('SELECT COALESCE(SUM(CAST(info AS UNSIGNED)), 0) FROM history WHERE player_id = ? AND kind = "donate"', [$pid])->fetchColumn();
   $today = q('SELECT bucks, coins FROM corp_don WHERE player_id = ? AND day = UTC_DATE()', [$pid])->fetch() ?: ['bucks' => 0, 'coins' => 0];
@@ -103,6 +99,8 @@ function corpName($n, int $self = 0): string {
 function needCorp(int $pid): array { $c = myCorp($pid); if (!$c) fail('no_corp'); return $c; }
 function needRole(array $c, int $r) { if ((int)$c['role'] < $r) fail('corp_rights', 403); }
 function corpMail(int $to, string $title, string $body) { q('INSERT INTO mail (player_id, sender, icon, title, body) VALUES (?, ?, ?, ?, ?)', [$to, 'Корпорація', 'bz_office', $title, $body]); }
+
+require_once __DIR__ . '/invest.php'; // переговори з інвесторами: функції + дії corp_inv_*
 
 switch ($a) {
 
